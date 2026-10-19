@@ -69,17 +69,15 @@ Para parar: `Ctrl + C`.
 
 ## Estrutura do banco
 
-| Tabela            | O que guarda                                              |
-|-------------------|-----------------------------------------------------------|
-| `usuarios`        | dados de login (nome, e-mail, senha criptografada)        |
-| `sessoes`         | logins ativos em cada dispositivo (web, Android, iOS)     |
-| `tokens_email`    | confirmação de e-mail e recuperação de senha              |
-| `perfis`          | nível, modalidade, cidade/UF, pretensão salarial          |
-| `areas_interesse` | lista de áreas (Tecnologia, Marketing, etc.)              |
-| `usuario_areas`   | quais áreas cada usuário escolheu                         |
-| `planos`          | planos disponíveis (Grátis, Pro, Premium)                 |
-| `assinaturas`     | assinatura de cada usuário e status do pagamento          |
-| `vagas_usuario`   | vagas recomendadas, salvas ou candidatadas por usuário    |
+| Tabela          | O que guarda                                                                 |
+|-----------------|------------------------------------------------------------------------------|
+| `usuarios`      | dados de login (nome, e-mail, senha criptografada)                           |
+| `sessoes`       | logins ativos em cada dispositivo (web, Android, iOS)                        |
+| `tokens_email`  | confirmação de e-mail e recuperação de senha                                 |
+| `perfis`        | tudo que o cadastro do site pergunta: momento, áreas, níveis, contratos, modalidades, turnos, escolaridade, experiências, habilidades, idiomas, cidade/UF |
+| `planos`        | planos disponíveis (Grátis, Pro, Premium)                                    |
+| `assinaturas`   | assinatura de cada usuário e status do pagamento                             |
+| `vagas_usuario` | vagas recomendadas, salvas ou candidatadas por usuário                       |
 
 ### Regra importante para alterar o banco
 
