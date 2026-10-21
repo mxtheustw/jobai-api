@@ -27,7 +27,18 @@ public final class AuthDtos {
             @Size(min = 8, max = 72, message = "A senha precisa ter entre 8 e 72 caracteres.")
             String senha,
 
+            /** Aceite dos termos + "Tenho 14 anos ou mais". Sem ele, a conta não é criada. */
+            @NotNull(message = "Aceite os termos de uso para criar sua conta.")
+            @Valid
+            AceiteTermos aceiteTermos,
+
             String dispositivo
+    ) {
+    }
+
+    /** { "versao": "2026-10" } */
+    public record AceiteTermos(
+            @NotBlank(message = "Informe a versão dos termos.") String versao
     ) {
     }
 

@@ -1,5 +1,7 @@
 package com.vagas.contas.auth;
 
+import com.vagas.contas.aceite.AceiteService;
+import com.vagas.contas.aceite.TipoAceite;
 import com.vagas.contas.auth.AuthDtos.CadastroRequest;
 import com.vagas.contas.auth.AuthDtos.GoogleRequest;
 import com.vagas.contas.auth.AuthDtos.LoginRequest;
@@ -31,19 +33,22 @@ public class AuthService {
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final AceiteService aceiteService;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        SessaoRepository sessaoRepository,
                        PerfilService perfilService,
                        TokenService tokenService,
                        PasswordEncoder passwordEncoder,
-                       GoogleTokenVerifier googleTokenVerifier) {
+                       GoogleTokenVerifier googleTokenVerifier,
+                       AceiteService aceiteService) {
         this.usuarioRepository = usuarioRepository;
         this.sessaoRepository = sessaoRepository;
         this.perfilService = perfilService;
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.aceiteService = aceiteService;
     }
 
     /** Cria a conta + o perfil e já devolve a pessoa logada. */
@@ -52,12 +57,16 @@ public class AuthService {
         PerfilDto perfil = req.perfil();
         String email = normalizarEmail(perfil.email());
 
+        // Confere a versão dos termos ANTES de criar qualquer coisa
+        aceiteService.validarVersao(req.aceiteTermos().versao());
+
         if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new ApiException(HttpStatus.CONFLICT, "Já existe uma conta com este e-mail.");
         }
 
         Usuario usuario = Usuario.comSenha(perfil.nome().trim(), email, passwordEncoder.encode(req.senha()));
         usuarioRepository.saveAndFlush(usuario);
+        aceiteService.registrar(usuario.getId(), TipoAceite.TERMOS, req.aceiteTermos().versao());
         perfilService.salvar(usuario.getId(), perfil);
 
         return responder(usuario, Dispositivo.de(req.dispositivo()), true);

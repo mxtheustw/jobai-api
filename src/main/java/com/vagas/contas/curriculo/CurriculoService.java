@@ -1,5 +1,6 @@
 package com.vagas.contas.curriculo;
 
+import com.vagas.contas.aceite.AceiteService;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.perfil.Perfil;
 import com.vagas.contas.perfil.PerfilRepository;
@@ -34,13 +35,16 @@ public class CurriculoService {
 
     private final PerfilRepository perfilRepository;
     private final ArmazenamentoCurriculos armazenamento;
+    private final AceiteService aceiteService;
     private final long tamanhoMaximoMb;
 
     public CurriculoService(PerfilRepository perfilRepository,
                             ArmazenamentoCurriculos armazenamento,
+                            AceiteService aceiteService,
                             @Value("${app.curriculos.tamanho-maximo-mb:5}") long tamanhoMaximoMb) {
         this.perfilRepository = perfilRepository;
         this.armazenamento = armazenamento;
+        this.aceiteService = aceiteService;
         this.tamanhoMaximoMb = tamanhoMaximoMb;
     }
 
@@ -50,6 +54,7 @@ public class CurriculoService {
 
     @Transactional
     public CurriculoInfo enviar(UUID usuarioId, MultipartFile arquivo) {
+        aceiteService.exigirTermos(usuarioId);
         if (arquivo == null || arquivo.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Escolha um arquivo para enviar.");
         }

@@ -49,6 +49,7 @@ Digite `\q` para sair.
 | `GOOGLE_CLIENT_ID` | não         | vazio (Google desligado)                  | ID do app no Google Cloud, para "Entrar com Google" |
 | `CORS_ORIGENS`     | não         | `http://localhost:3000`                   | sites que podem chamar a API (separados por vírgula) |
 | `CURRICULOS_PASTA` | não         | `dados/curriculos`                        | pasta onde os currículos ficam guardados         |
+| `TERMOS_VERSAO`    | não         | `2026-10`                                 | versão atual dos termos de uso                   |
 
 **Gerar um `JWT_SECRET`** no PowerShell:
 
@@ -88,6 +89,7 @@ Para parar: `Ctrl + C`.
 | `perfis`        | tudo que o cadastro do site pergunta (momento, áreas, níveis, contratos, modalidades, turnos, escolaridade, experiências, habilidades, idiomas, cidade/UF) + a referência do currículo |
 | `planos`        | planos disponíveis (Grátis, Pro, Premium)                                    |
 | `assinaturas`   | assinatura de cada usuário e status do pagamento                             |
+| `aceites`       | declarações: aceite dos termos ("Tenho 14 anos ou mais") e maioridade para plano pago. Guarda tipo, versão e data, **nunca a idade** |
 | `vagas_usuario` | vagas de cada usuário + resultado do match (porcentagem, por que combina, o que falta) |
 
 ### Regra importante para alterar o banco
@@ -95,7 +97,7 @@ Para parar: `Ctrl + C`.
 As tabelas são criadas pelos arquivos em `src/main/resources/db/migration`.
 
 - **Nunca edite** um arquivo de migração que já foi enviado (ex.: `V1__schema_inicial.sql`).
-- Para mudar algo, **crie um arquivo novo** com o próximo número: `V4__descricao_da_mudanca.sql`.
+- Para mudar algo, **crie um arquivo novo** com o próximo número: `V5__descricao_da_mudanca.sql`.
 
 ## Endpoints (para o front)
 
@@ -110,6 +112,7 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | POST   | `/auth/logout`   | não                   | encerra a sessão daquele dispositivo        |
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
+| POST   | `/me/aceites`    | sim                   | registra um aceite (termos ou maioridade)   |
 | POST   | `/me/curriculo`  | sim                   | envia ou substitui o currículo (PDF)        |
 | GET    | `/me/curriculo`  | sim                   | baixa o currículo enviado                   |
 | DELETE | `/me/curriculo`  | sim                   | remove o currículo                          |
@@ -159,9 +162,12 @@ O campo `perfil` é **exatamente o `Profile`** de `frontend/src/types/profile.ts
     "idiomas": [{ "idioma": "Inglês", "nivel": "basico" }]
   },
   "senha": "minhasenha123",
+  "aceiteTermos": { "versao": "2026-10" },
   "dispositivo": "WEB"
 }
 ```
+
+- `aceiteTermos`: **obrigatório**. É o checkbox dos termos com "Tenho 14 anos ou mais". Sem ele (ou com versão diferente da atual), a conta não é criada.
 
 - `senha`: de 8 a 72 caracteres.
 - `dispositivo`: `WEB`, `ANDROID` ou `IOS` (se não enviar, vale `WEB`).
@@ -194,6 +200,8 @@ Só funciona quando `GOOGLE_CLIENT_ID` estiver configurado (o mesmo Client ID us
   "id": "…",
   "provedor": "LOCAL",
   "emailVerificado": false,
+  "termosAceitos": true,
+  "perfilCompleto": true,
   "perfil": { "...mesmo formato do Profile..." },
   "curriculo": { "nome": "curriculo-ana.pdf", "tamanhoBytes": 183204, "enviadoEm": "2026-10-20T23:10:00Z" }
 }
@@ -201,9 +209,35 @@ Só funciona quando `GOOGLE_CLIENT_ID` estiver configurado (o mesmo Client ID us
 
 `curriculo` vem `null` enquanto a pessoa não enviar um.
 
+- `termosAceitos`: a pessoa aceitou a **versão atual** dos termos.
+- `perfilCompleto`: respondeu as perguntas obrigatórias do cadastro: cidade/UF, momento, áreas, níveis, contratos,
+  modalidades, turnos e escolaridade (habilidades e idiomas podem ficar vazios).
+
 ### `PUT /me/perfil`
 
 Envie o `Profile` completo (mesmo formato do cadastro, sem a senha). O e-mail não muda por aqui.
+Exige que a pessoa tenha aceitado os termos (senão responde **403**).
+
+### `POST /me/aceites`
+
+```json
+{ "tipo": "TERMOS", "versao": "2026-10" }
+```
+
+- `tipo`: `TERMOS` (aceite dos termos + "Tenho 14 anos ou mais") ou `MAIORIDADE_ASSINATURA`
+  ("Tenho 18 anos ou mais, ou sou o responsável e autorizo a assinatura").
+- Resposta (201): `{ "tipo": "TERMOS", "versao": "2026-10", "aceitoEm": "..." }`. Repetir não dá erro.
+- A API **não guarda idade**: só a declaração, a versão e a data.
+
+### Fluxo do cadastro pelo Google
+
+1. A pessoa marca o checkbox dos termos e clica em "Entrar com Google".
+2. `POST /auth/google` → se `novoUsuario: true`, a conta acabou de ser criada.
+3. `POST /me/aceites` com `{ "tipo": "TERMOS", "versao": "2026-10" }`.
+4. `PUT /me/perfil` com as respostas do cadastro.
+
+Se alguém entrar pelo Google na tela de **login** sem ter conta: o `GET /me` vem com `termosAceitos: false`
+e `perfilCompleto: false` → mostre os termos e mande para o cadastro.
 
 ### Currículo: `POST /me/curriculo`
 
@@ -241,6 +275,7 @@ Todo erro vem neste formato, pronto para mostrar na tela:
 |--------|-----------------------------------------------------|
 | 400    | dados inválidos ou opção que não existe no cadastro |
 | 401    | e-mail/senha errados, ou token vencido/inválido     |
+| 403    | termos ainda não aceitos (salvar perfil, enviar currículo) |
 | 404    | currículo não enviado                               |
 | 409    | já existe conta com esse e-mail                     |
 | 413    | arquivo maior que 5 MB                              |

@@ -172,6 +172,23 @@ public class Perfil {
     public String getIdiomas() { return idiomas; }
     public void setIdiomas(String idiomas) { this.idiomas = idiomas; }
 
+    /**
+     * O perfil tem as respostas obrigatórias do cadastro?
+     * Obrigatórias: cidade/UF, momento, áreas, níveis, contratos, modalidades, turnos e escolaridade.
+     * (Habilidades e idiomas podem ficar vazios: tem gente que ainda não tem nenhum.)
+     */
+    public boolean estaCompleto() {
+        return cidade != null && uf != null
+                && momento != null
+                && escolaridadeNivel != null && escolaridadeStatus != null
+                && naoVazia(areas) && naoVazia(niveis) && naoVazia(contratos)
+                && naoVazia(modalidades) && naoVazia(turnos);
+    }
+
+    private static boolean naoVazia(List<String> lista) {
+        return lista != null && !lista.isEmpty();
+    }
+
     // ----- currículo -----
 
     public boolean temCurriculo() { return curriculoChave != null; }

@@ -1,5 +1,6 @@
 package com.vagas.contas.perfil;
 
+import com.vagas.contas.aceite.AceiteService;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.usuario.Usuario;
 import com.vagas.contas.usuario.UsuarioRepository;
@@ -26,19 +27,27 @@ public class PerfilService {
 
     private final PerfilRepository perfilRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AceiteService aceiteService;
     private final JsonMapper json;
 
     public PerfilService(PerfilRepository perfilRepository,
                          UsuarioRepository usuarioRepository,
+                         AceiteService aceiteService,
                          JsonMapper json) {
         this.perfilRepository = perfilRepository;
         this.usuarioRepository = usuarioRepository;
+        this.aceiteService = aceiteService;
         this.json = json;
     }
 
-    /** O que o GET /me devolve: o id da conta + o perfil no formato do site. */
-    public record MeResponse(UUID id, String provedor, boolean emailVerificado, PerfilDto perfil,
-                             CurriculoInfo curriculo) {
+    /**
+     * O que o GET /me devolve: o id da conta + o perfil no formato do site.
+     * - termosAceitos: aceitou a versão ATUAL dos termos?
+     * - perfilCompleto: respondeu as perguntas obrigatórias do cadastro? (ver Perfil.estaCompleto)
+     */
+    public record MeResponse(UUID id, String provedor, boolean emailVerificado,
+                             boolean termosAceitos, boolean perfilCompleto,
+                             PerfilDto perfil, CurriculoInfo curriculo) {
     }
 
     /** Dados do currículo enviado (ou null se a pessoa ainda não enviou). */
@@ -75,12 +84,16 @@ public class PerfilService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Conta não encontrada."));
         Perfil perfil = perfilRepository.findById(usuarioId).orElseGet(() -> new Perfil(usuarioId));
         return new MeResponse(usuario.getId(), usuario.getProvedor().name(),
-                usuario.isEmailVerificado(), paraDto(usuario, perfil), CurriculoInfo.de(perfil));
+                usuario.isEmailVerificado(),
+                aceiteService.aceitouTermos(usuarioId),
+                perfil.estaCompleto(),
+                paraDto(usuario, perfil), CurriculoInfo.de(perfil));
     }
 
     /** PUT /me/perfil: atualiza o perfil (e o nome). O e-mail não muda por aqui. */
     @Transactional
     public MeResponse atualizar(UUID usuarioId, PerfilDto dto) {
+        aceiteService.exigirTermos(usuarioId);
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Conta não encontrada."));
         if (dto.nome() != null && !dto.nome().isBlank()) {
