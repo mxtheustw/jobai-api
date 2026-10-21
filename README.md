@@ -48,6 +48,7 @@ Digite `\q` para sair.
 | `DB_USER`          | não         | `postgres`                                | usuário do banco                                 |
 | `GOOGLE_CLIENT_ID` | não         | vazio (Google desligado)                  | ID do app no Google Cloud, para "Entrar com Google" |
 | `CORS_ORIGENS`     | não         | `http://localhost:3000`                   | sites que podem chamar a API (separados por vírgula) |
+| `CURRICULOS_PASTA` | não         | `dados/curriculos`                        | pasta onde os currículos ficam guardados         |
 
 **Gerar um `JWT_SECRET`** no PowerShell:
 
@@ -84,17 +85,17 @@ Para parar: `Ctrl + C`.
 | `usuarios`      | dados de login (nome, e-mail, senha criptografada)                           |
 | `sessoes`       | logins ativos em cada dispositivo (web, Android, iOS)                        |
 | `tokens_email`  | confirmação de e-mail e recuperação de senha                                 |
-| `perfis`        | tudo que o cadastro do site pergunta: momento, áreas, níveis, contratos, modalidades, turnos, escolaridade, experiências, habilidades, idiomas, cidade/UF |
+| `perfis`        | tudo que o cadastro do site pergunta (momento, áreas, níveis, contratos, modalidades, turnos, escolaridade, experiências, habilidades, idiomas, cidade/UF) + a referência do currículo |
 | `planos`        | planos disponíveis (Grátis, Pro, Premium)                                    |
 | `assinaturas`   | assinatura de cada usuário e status do pagamento                             |
-| `vagas_usuario` | vagas recomendadas, salvas ou candidatadas por usuário                       |
+| `vagas_usuario` | vagas de cada usuário + resultado do match (porcentagem, por que combina, o que falta) |
 
 ### Regra importante para alterar o banco
 
 As tabelas são criadas pelos arquivos em `src/main/resources/db/migration`.
 
 - **Nunca edite** um arquivo de migração que já foi enviado (ex.: `V1__schema_inicial.sql`).
-- Para mudar algo, **crie um arquivo novo** com o próximo número: `V3__descricao_da_mudanca.sql`.
+- Para mudar algo, **crie um arquivo novo** com o próximo número: `V4__descricao_da_mudanca.sql`.
 
 ## Endpoints (para o front)
 
@@ -109,6 +110,9 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | POST   | `/auth/logout`   | não                   | encerra a sessão daquele dispositivo        |
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
+| POST   | `/me/curriculo`  | sim                   | envia ou substitui o currículo (PDF)        |
+| GET    | `/me/curriculo`  | sim                   | baixa o currículo enviado                   |
+| DELETE | `/me/curriculo`  | sim                   | remove o currículo                          |
 
 ### Como funciona o login
 
@@ -190,13 +194,37 @@ Só funciona quando `GOOGLE_CLIENT_ID` estiver configurado (o mesmo Client ID us
   "id": "…",
   "provedor": "LOCAL",
   "emailVerificado": false,
-  "perfil": { "...mesmo formato do Profile..." }
+  "perfil": { "...mesmo formato do Profile..." },
+  "curriculo": { "nome": "curriculo-ana.pdf", "tamanhoBytes": 183204, "enviadoEm": "2026-10-20T23:10:00Z" }
 }
 ```
+
+`curriculo` vem `null` enquanto a pessoa não enviar um.
 
 ### `PUT /me/perfil`
 
 Envie o `Profile` completo (mesmo formato do cadastro, sem a senha). O e-mail não muda por aqui.
+
+### Currículo: `POST /me/curriculo`
+
+- Formato **multipart/form-data**, com o arquivo no campo `arquivo`.
+- Só **PDF**, até **5 MB**. Enviar outro substitui o anterior.
+- Resposta (201): `{ "nome": "...", "tamanhoBytes": 183204, "enviadoEm": "..." }`
+
+No front (exemplo):
+
+```ts
+const dados = new FormData();
+dados.append("arquivo", arquivoPdf); // File vindo do <input type="file">
+await fetch("http://localhost:8080/me/curriculo", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${accessToken}` }, // NÃO defina Content-Type: o navegador faz isso
+  body: dados,
+});
+```
+
+Os arquivos ficam na pasta `dados/curriculos` (ignorada pelo Git). Quando o banco for para o Supabase,
+eles passam para o **Supabase Storage** sem mudar as rotas.
 
 ### Erros
 
@@ -213,5 +241,7 @@ Todo erro vem neste formato, pronto para mostrar na tela:
 |--------|-----------------------------------------------------|
 | 400    | dados inválidos ou opção que não existe no cadastro |
 | 401    | e-mail/senha errados, ou token vencido/inválido     |
+| 404    | currículo não enviado                               |
 | 409    | já existe conta com esse e-mail                     |
+| 413    | arquivo maior que 5 MB                              |
 | 503    | "Entrar com Google" ainda não configurado           |

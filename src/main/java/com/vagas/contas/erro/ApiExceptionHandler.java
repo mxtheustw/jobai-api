@@ -10,6 +10,9 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -56,6 +59,20 @@ public class ApiExceptionHandler {
         log.warn("Banco recusou os dados: {}", e.getMostSpecificCause().getMessage());
         return ResponseEntity.badRequest()
                 .body(new Erro("Algum valor enviado não é aceito. Confira as opções do cadastro.", Map.of()));
+    }
+
+    /** Arquivo maior que o limite (spring.servlet.multipart.max-file-size). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Erro> arquivoGrande(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new Erro("O arquivo é grande demais.", Map.of()));
+    }
+
+    /** Envio de arquivo sem o campo "arquivo" ou fora do formato multipart. */
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ResponseEntity<Erro> envioDeArquivoInvalido(Exception e) {
+        return ResponseEntity.badRequest()
+                .body(new Erro("Envie o arquivo no campo \"arquivo\" (formato multipart/form-data).", Map.of()));
     }
 
     /** Qualquer outro erro inesperado. O detalhe fica só no log, nunca vai para o site. */

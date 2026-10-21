@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Curriculos enviados (nunca vao para o Git) ###
+dados/

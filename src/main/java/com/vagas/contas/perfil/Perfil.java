@@ -79,6 +79,23 @@ public class Perfil {
     @Column(columnDefinition = "jsonb", nullable = false)
     private String idiomas = "[]";
 
+    // ----- Currículo (V3): o arquivo fica fora do banco, aqui só a referência -----
+
+    @Column(name = "curriculo_chave")
+    private String curriculoChave;
+
+    @Column(name = "curriculo_nome")
+    private String curriculoNome;
+
+    @Column(name = "curriculo_tipo")
+    private String curriculoTipo;
+
+    @Column(name = "curriculo_tamanho")
+    private Long curriculoTamanho;
+
+    @Column(name = "curriculo_enviado_em")
+    private Instant curriculoEnviadoEm;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm = Instant.now();
 
@@ -154,4 +171,27 @@ public class Perfil {
 
     public String getIdiomas() { return idiomas; }
     public void setIdiomas(String idiomas) { this.idiomas = idiomas; }
+
+    // ----- currículo -----
+
+    public boolean temCurriculo() { return curriculoChave != null; }
+
+    public String getCurriculoChave() { return curriculoChave; }
+    public String getCurriculoNome() { return curriculoNome; }
+    public String getCurriculoTipo() { return curriculoTipo; }
+    public Long getCurriculoTamanho() { return curriculoTamanho; }
+    public Instant getCurriculoEnviadoEm() { return curriculoEnviadoEm; }
+
+    public void definirCurriculo(String chave, String nome, String tipo, long tamanho, Instant enviadoEm) {
+        this.curriculoChave = chave;
+        this.curriculoNome = nome;
+        this.curriculoTipo = tipo;
+        this.curriculoTamanho = tamanho;
+        this.curriculoEnviadoEm = enviadoEm;
+    }
+
+    public void removerCurriculo() {
+        definirCurriculo(null, null, null, 0, null);
+        this.curriculoTamanho = null;
+    }
 }

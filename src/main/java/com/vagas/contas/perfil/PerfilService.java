@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -36,7 +37,20 @@ public class PerfilService {
     }
 
     /** O que o GET /me devolve: o id da conta + o perfil no formato do site. */
-    public record MeResponse(UUID id, String provedor, boolean emailVerificado, PerfilDto perfil) {
+    public record MeResponse(UUID id, String provedor, boolean emailVerificado, PerfilDto perfil,
+                             CurriculoInfo curriculo) {
+    }
+
+    /** Dados do currículo enviado (ou null se a pessoa ainda não enviou). */
+    public record CurriculoInfo(String nome, long tamanhoBytes, Instant enviadoEm) {
+
+        public static CurriculoInfo de(Perfil perfil) {
+            if (!perfil.temCurriculo()) {
+                return null;
+            }
+            return new CurriculoInfo(perfil.getCurriculoNome(), perfil.getCurriculoTamanho(),
+                    perfil.getCurriculoEnviadoEm());
+        }
     }
 
     /** Cria ou substitui o perfil de um usuário com os dados vindos do site. */
@@ -61,7 +75,7 @@ public class PerfilService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Conta não encontrada."));
         Perfil perfil = perfilRepository.findById(usuarioId).orElseGet(() -> new Perfil(usuarioId));
         return new MeResponse(usuario.getId(), usuario.getProvedor().name(),
-                usuario.isEmailVerificado(), paraDto(usuario, perfil));
+                usuario.isEmailVerificado(), paraDto(usuario, perfil), CurriculoInfo.de(perfil));
     }
 
     /** PUT /me/perfil: atualiza o perfil (e o nome). O e-mail não muda por aqui. */
