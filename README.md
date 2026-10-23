@@ -62,6 +62,24 @@ Depois de criar, **feche e abra de novo** o IntelliJ/terminal.
 
 > ⚠️ Nunca escreva senhas ou chaves direto no `application.properties`. Use sempre as variáveis.
 
+### Usar o banco do Supabase (compartilhado pelo time)
+
+Em vez do banco local, a API pode usar o Postgres do Supabase. Não muda nenhuma linha de código:
+só as variáveis de ambiente.
+
+| Variável      | Valor                                                                                   |
+|---------------|-----------------------------------------------------------------------------------------|
+| `DB_URL`      | `jdbc:postgresql://<host-do-pooler>:5432/postgres?sslmode=require`                      |
+| `DB_USER`     | `postgres.<id-do-projeto>`                                                              |
+| `DB_PASSWORD` | a senha do banco do Supabase (peça no gerenciador de senhas do time)                    |
+
+- Os dados ficam em **Supabase → Connect → Session pooler** (funciona em qualquer internet, IPv4).
+- Na primeira vez, o Flyway cria todas as tabelas no Supabase sozinho.
+- As tabelas têm **RLS ligado** (V5), então a "Data API" do Supabase não acessa nada: tudo passa pela api-contas.
+- Para voltar ao banco local, apague `DB_URL` e `DB_USER` e volte o `DB_PASSWORD` para a senha local.
+- Plano grátis: o projeto **pausa depois de uma semana sem uso**. Para reativar: painel do Supabase → **Restore**.
+- Os **currículos** ainda ficam na pasta local de quem roda a API (o Supabase Storage é o próximo passo).
+
 ### 4. Rodar a API
 
 Dentro da pasta `backend/api-contas`:
@@ -97,7 +115,7 @@ Para parar: `Ctrl + C`.
 As tabelas são criadas pelos arquivos em `src/main/resources/db/migration`.
 
 - **Nunca edite** um arquivo de migração que já foi enviado (ex.: `V1__schema_inicial.sql`).
-- Para mudar algo, **crie um arquivo novo** com o próximo número: `V5__descricao_da_mudanca.sql`.
+- Para mudar algo, **crie um arquivo novo** com o próximo número: `V6__descricao_da_mudanca.sql`.
 
 ## Endpoints (para o front)
 
