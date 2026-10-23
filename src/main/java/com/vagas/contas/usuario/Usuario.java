@@ -89,6 +89,16 @@ public class Usuario {
         this.emailVerificado = true;
     }
 
+    /** Troca a senha (recebe a senha já criptografada). */
+    public void trocarSenha(String novoHash) {
+        this.senhaHash = novoHash;
+    }
+
+    /** A conta tem senha? (quem entrou só pelo Google não tem) */
+    public boolean temSenha() {
+        return senhaHash != null;
+    }
+
     @PreUpdate
     void aoAtualizar() {
         this.atualizadoEm = Instant.now();

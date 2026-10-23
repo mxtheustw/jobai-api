@@ -6,6 +6,7 @@ import com.vagas.contas.auth.AuthDtos.CadastroRequest;
 import com.vagas.contas.auth.AuthDtos.GoogleRequest;
 import com.vagas.contas.auth.AuthDtos.LoginRequest;
 import com.vagas.contas.auth.AuthDtos.TokensResponse;
+import com.vagas.contas.auth.AuthDtos.TrocarSenhaRequest;
 import com.vagas.contas.auth.AuthDtos.UsuarioResponse;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.perfil.PerfilDto;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 
 /** As regras de cadastro, login, renovação, saída e Google. */
 @Service
@@ -133,6 +135,35 @@ public class AuthService {
         }
 
         return responder(usuario, Dispositivo.de(req.dispositivo()), novo);
+    }
+
+    /**
+     * Troca a senha de quem está logado.
+     * Por segurança, encerra as sessões de TODOS os dispositivos e devolve tokens novos
+     * só para o dispositivo atual (quem trocou continua logado).
+     */
+    @Transactional
+    public TokensResponse trocarSenha(UUID usuarioId, TrocarSenhaRequest req) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .filter(Usuario::isAtivo)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, SESSAO_INVALIDA));
+
+        if (!usuario.temSenha()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Sua conta entra pelo Google, então não tem senha para trocar.");
+        }
+        if (!passwordEncoder.matches(req.senhaAtual(), usuario.getSenhaHash())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A senha atual está incorreta.");
+        }
+        if (passwordEncoder.matches(req.novaSenha(), usuario.getSenhaHash())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A nova senha precisa ser diferente da atual.");
+        }
+
+        usuario.trocarSenha(passwordEncoder.encode(req.novaSenha()));
+        usuarioRepository.saveAndFlush(usuario);
+        sessaoRepository.revogarTodas(usuarioId);
+
+        return responder(usuario, Dispositivo.de(req.dispositivo()), false);
     }
 
     private TokensResponse responder(Usuario usuario, Dispositivo dispositivo, boolean novoUsuario) {

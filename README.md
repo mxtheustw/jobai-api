@@ -112,6 +112,8 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | POST   | `/auth/logout`   | não                   | encerra a sessão daquele dispositivo        |
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
+| PUT    | `/me/senha`      | sim                   | troca a senha                               |
+| DELETE | `/me`            | sim                   | exclui a conta e todos os dados             |
 | POST   | `/me/aceites`    | sim                   | registra um aceite (termos ou maioridade)   |
 | POST   | `/me/curriculo`  | sim                   | envia ou substitui o currículo (PDF)        |
 | GET    | `/me/curriculo`  | sim                   | baixa o currículo enviado                   |
@@ -217,6 +219,30 @@ Só funciona quando `GOOGLE_CLIENT_ID` estiver configurado (o mesmo Client ID us
 
 Envie o `Profile` completo (mesmo formato do cadastro, sem a senha). O e-mail não muda por aqui.
 Exige que a pessoa tenha aceitado os termos (senão responde **403**).
+
+### `PUT /me/senha`
+
+```json
+{ "senhaAtual": "minhasenha123", "novaSenha": "outrasenha456", "dispositivo": "WEB" }
+```
+
+- A nova senha segue a mesma regra do cadastro (8 a 72 caracteres) e precisa ser diferente da atual.
+- Por segurança, **encerra a sessão em todos os dispositivos** e devolve tokens novos (mesmo formato do login)
+  só para quem trocou. Guarde os tokens novos.
+- Contas que entram só pelo Google não têm senha: respondem 400.
+
+### `DELETE /me`
+
+```json
+{ "senha": "minhasenha123" }
+```
+
+- Exclui a conta **e tudo ligado a ela**: perfil, currículo (o arquivo também), sessões, aceites, assinaturas e vagas.
+  **Não tem volta.**
+- Contas com senha precisam mandar a `senha` para confirmar. Contas do Google podem mandar `{}`
+  (o site deve pedir uma confirmação na tela antes).
+- Resposta: **204** (sem corpo). Depois disso, apague os tokens guardados no site/app.
+- ⚠️ Quando existirem pagamentos, a exclusão também vai precisar cancelar a assinatura no meio de pagamento.
 
 ### `POST /me/aceites`
 

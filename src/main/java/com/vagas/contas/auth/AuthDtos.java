@@ -50,6 +50,18 @@ public final class AuthDtos {
     ) {
     }
 
+    /** PUT /me/senha */
+    public record TrocarSenhaRequest(
+            @NotBlank(message = "Informe sua senha atual.") String senhaAtual,
+
+            @NotBlank(message = "Crie uma nova senha.")
+            @Size(min = 8, max = 72, message = "A senha precisa ter entre 8 e 72 caracteres.")
+            String novaSenha,
+
+            String dispositivo
+    ) {
+    }
+
     /** POST /auth/refresh e POST /auth/logout */
     public record RefreshRequest(
             @NotBlank(message = "Envie o refreshToken.") String refreshToken
