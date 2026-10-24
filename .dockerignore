@@ -1,0 +1,7 @@
+# O que NÃO vai para dentro da imagem Docker
+target/
+dados/
+.idea/
+*.iml
+.vscode/
+HELP.md

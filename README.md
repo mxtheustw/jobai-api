@@ -97,6 +97,29 @@ Na primeira execução, o Flyway cria todas as tabelas sozinho.
 
 Para parar: `Ctrl + C`.
 
+## Hospedagem (Render, plano grátis)
+
+A API roda no **Render** a partir do `Dockerfile` desta pasta.
+
+| Configuração no Render | Valor                                  |
+|------------------------|----------------------------------------|
+| Tipo                   | Web Service                            |
+| Root Directory         | `backend/api-contas`                   |
+| Runtime / Language     | Docker                                 |
+| Region                 | Oregon (US West), a mesma do Supabase  |
+| Instance Type          | Free                                   |
+| Health Check Path      | `/saude`                               |
+
+Variáveis de ambiente no Render: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (**uma chave nova, só do servidor**),
+`GOOGLE_CLIENT_ID` e `CORS_ORIGENS`. A porta vem sozinha (`PORT`).
+
+Limites do plano grátis:
+- **Dorme depois de 15 minutos sem uso** e leva por volta de 1 minuto (ou mais) para acordar. O site pode chamar
+  `GET /saude` ao abrir, para ir acordando a API.
+- **Arquivos não ficam salvos**: a cada reinício o disco é zerado. Por isso os currículos precisam ir para o
+  Supabase Storage antes de usar isso de verdade.
+- Toda vez que a `main` muda, o Render publica a versão nova sozinho.
+
 ## Estrutura do banco
 
 | Tabela          | O que guarda                                                                 |
@@ -123,6 +146,7 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 
 | Método | Rota             | Precisa estar logado? | O que faz                                   |
 |--------|------------------|-----------------------|---------------------------------------------|
+| GET    | `/saude`         | não                   | responde `{"status":"ok"}` se a API está no ar |
 | POST   | `/auth/cadastro` | não                   | cria a conta + perfil e já devolve logado   |
 | POST   | `/auth/login`    | não                   | entra com e-mail e senha                    |
 | POST   | `/auth/google`   | não                   | entra (ou cria conta) com Google            |
