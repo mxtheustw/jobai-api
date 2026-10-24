@@ -21,4 +21,8 @@ ALTER TABLE planos        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assinaturas   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vagas_usuario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aceites       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS flyway_schema_history ENABLE ROW LEVEL SECURITY;
+
+-- A tabela flyway_schema_history NÃO entra aqui: o Flyway está usando ela
+-- durante a migração, e alterá-la agora trava (os dois ficam esperando um
+-- pelo outro). Ela já fica protegida porque a Data API está desligada e o
+-- "automatic RLS" do Supabase liga o RLS nas tabelas novas.
