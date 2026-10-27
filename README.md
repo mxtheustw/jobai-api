@@ -49,6 +49,7 @@ Digite `\q` para sair.
 | `GOOGLE_CLIENT_ID` | não         | vazio (Google desligado)                  | ID do app no Google Cloud, para "Entrar com Google" |
 | `CORS_ORIGENS`     | não         | `http://localhost:3000`                   | sites que podem chamar a API (separados por vírgula) |
 | `CURRICULOS_PASTA` | não         | `dados/curriculos`                        | pasta onde os currículos ficam guardados         |
+| `INTERNO_CHAVE`    | não         | vazio (rotas internas desligadas)         | chave do coletor/match para `/interno/**` (mínimo 32 caracteres) |
 | `TERMOS_VERSAO`    | não         | `2026-10`                                 | versão atual dos termos de uso                   |
 
 **Gerar um `JWT_SECRET`** no PowerShell:
@@ -131,6 +132,7 @@ Limites do plano grátis:
 | `planos`        | planos disponíveis (Grátis, Pro, Premium)                                    |
 | `assinaturas`   | assinatura de cada usuário e status do pagamento                             |
 | `aceites`       | declarações: aceite dos termos ("Tenho 14 anos ou mais") e maioridade para plano pago. Guarda tipo, versão e data, **nunca a idade** |
+| `vagas`         | vagas coletadas (Gupy etc.), únicas por `fonte` + `id_fonte`, com `ativa` e `vista_por_ultimo_em` |
 | `vagas_usuario` | vagas de cada usuário + resultado do match (porcentagem, por que combina, o que falta) |
 
 ### Regra importante para alterar o banco
@@ -138,7 +140,7 @@ Limites do plano grátis:
 As tabelas são criadas pelos arquivos em `src/main/resources/db/migration`.
 
 - **Nunca edite** um arquivo de migração que já foi enviado (ex.: `V1__schema_inicial.sql`).
-- Para mudar algo, **crie um arquivo novo** com o próximo número: `V6__descricao_da_mudanca.sql`.
+- Para mudar algo, **crie um arquivo novo** com o próximo número: `V7__descricao_da_mudanca.sql`.
 
 ## Endpoints (para o front)
 
@@ -327,6 +329,62 @@ await fetch("http://localhost:8080/me/curriculo", {
 
 Os arquivos ficam na pasta `dados/curriculos` (ignorada pelo Git). Quando o banco for para o Supabase,
 eles passam para o **Supabase Storage** sem mudar as rotas.
+
+### Rotas internas (coletor e match)
+
+Não são usadas pelo site. Exigem o cabeçalho `X-Chave-Interna: <INTERNO_CHAVE>` (sem ele: **401**).
+Se `INTERNO_CHAVE` não estiver configurada, respondem **503**.
+
+#### `POST /interno/vagas`
+
+Até **500 vagas por envio**. Vaga nova é criada; vaga já conhecida (mesma `fonte` + `id_fonte`) é atualizada,
+reativada e marcada como vista agora.
+
+```json
+{
+  "vagas": [
+    {
+      "fonte": "gupy",
+      "id_fonte": "123456",
+      "titulo": "Estágio em Dados",
+      "empresa": "Empresa X",
+      "cidade": "São Paulo",
+      "uf": "SP",
+      "modelo": "hibrido",
+      "contrato": "estagio",
+      "senioridade": "estagio",
+      "ferramentas": ["SQL", "Excel"],
+      "anos_experiencia": null,
+      "publicada_em": "2026-10-25",
+      "prazo_inscricao": null,
+      "url": "https://...",
+      "descricao": "Texto da vaga..."
+    }
+  ]
+}
+```
+
+- Os nomes podem vir como no CSV do coletor (`id_fonte`) ou em camelCase (`idFonte`).
+- Obrigatórios: `fonte`, `id_fonte`, `titulo`, `url`. Campo sem valor: mande `null` (ou texto vazio).
+- `ferramentas` é uma **lista** (no CSV vem separada por `;`, então dê um `split(";")`).
+- `modelo`: `presencial`, `hibrido` ou `remoto`. `senioridade`: `estagio`, `trainee`, `junior`, `pleno`, `senior`,
+  `especialista`. Outro valor faz **só aquela vaga** ser recusada.
+- Datas no formato `AAAA-MM-DD`.
+
+Resposta:
+
+```json
+{ "recebidas": 120, "novas": 80, "atualizadas": 38, "recusadas": [ { "indice": 7, "motivo": "url vazia" } ] }
+```
+
+#### `POST /interno/vagas/expirar`
+
+```json
+{ "fonte": "gupy", "diasSemVer": 3 }
+```
+
+Desativa as vagas dessa fonte que o coletor não encontra há `diasSemVer` dias (padrão 3) e todas as vagas com
+prazo de inscrição vencido. Rode depois de cada coleta. Resposta: `{ "naoVistas": 12, "prazoVencido": 4 }`.
 
 ### Erros
 
