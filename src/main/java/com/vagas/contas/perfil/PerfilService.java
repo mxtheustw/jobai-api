@@ -4,6 +4,9 @@ import com.vagas.contas.aceite.AceiteService;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.usuario.Usuario;
 import com.vagas.contas.usuario.UsuarioRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,6 +63,31 @@ public class PerfilService {
             return new CurriculoInfo(perfil.getCurriculoNome(), perfil.getCurriculoTamanho(),
                     perfil.getCurriculoEnviadoEm());
         }
+    }
+
+    /** Perfil para o match: sem nome e sem e-mail (só o necessário para calcular). */
+    public record PerfilParaMatch(UUID usuarioId, PerfilDto perfil) {
+    }
+
+    public record PaginaPerfis(List<PerfilParaMatch> perfis, int pagina, boolean temMais) {
+    }
+
+    /**
+     * GET /interno/perfis: perfis completos de quem aceitou os termos atuais, em páginas.
+     * Usado pelo match (código do Igor).
+     */
+    @Transactional(readOnly = true)
+    public PaginaPerfis listarParaMatch(int pagina, int tamanho) {
+        int t = Math.max(1, Math.min(tamanho, 200));
+        int p = Math.max(0, pagina);
+        Page<Perfil> resultado = perfilRepository.findAll(PageRequest.of(p, t, Sort.by("usuarioId")));
+        List<PerfilParaMatch> lista = new ArrayList<>();
+        for (Perfil perfil : resultado.getContent()) {
+            if (perfil.estaCompleto() && aceiteService.aceitouTermos(perfil.getUsuarioId())) {
+                lista.add(new PerfilParaMatch(perfil.getUsuarioId(), paraDto(null, perfil)));
+            }
+        }
+        return new PaginaPerfis(lista, p, resultado.hasNext());
     }
 
     /** Cria ou substitui o perfil de um usuário com os dados vindos do site. */
@@ -136,6 +164,14 @@ public class PerfilService {
         p.setUltimoCargo(texto(dto.ultimoCargo()));
         p.setTempoExperiencia(texto(dto.tempoExperiencia()));
         p.setHabilidades(lista(dto.habilidades()));
+        List<String> cargos = lista(dto.cargosDesejados());
+        if (cargos.size() > 3) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Escolha até 3 cargos.");
+        }
+        if (cargos.stream().anyMatch(c -> c.length() > 100)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cada cargo pode ter até 100 caracteres.");
+        }
+        p.setCargosDesejados(cargos);
         List<PerfilDto.Idioma> idiomas = dto.idiomas() == null ? List.of() : dto.idiomas();
         p.setIdiomas(json.writeValueAsString(idiomas));
     }
@@ -150,7 +186,7 @@ public class PerfilService {
         List<PerfilDto.Idioma> idiomas = json.readValue(p.getIdiomas(), LISTA_IDIOMAS);
 
         return new PerfilDto(
-                u.getNome(),
+                u == null ? null : u.getNome(),
                 local,
                 p.getMomento(),
                 p.getAreas(),
@@ -167,7 +203,8 @@ public class PerfilService {
                 p.getTempoExperiencia(),
                 p.getHabilidades(),
                 idiomas,
-                u.getEmail()
+                p.getCargosDesejados(),
+                u == null ? null : u.getEmail()
         );
     }
 

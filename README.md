@@ -50,6 +50,7 @@ Digite `\q` para sair.
 | `CORS_ORIGENS`     | não         | `http://localhost:3000`                   | sites que podem chamar a API (separados por vírgula) |
 | `CURRICULOS_PASTA` | não         | `dados/curriculos`                        | pasta onde os currículos ficam guardados         |
 | `INTERNO_CHAVE`    | não         | vazio (rotas internas desligadas)         | chave do coletor/match para `/interno/**` (mínimo 32 caracteres) |
+| `PLANOS_LIBERAR_TUDO` | não      | `false`                                   | só para teste: trata todos como plano pago (mostra o "o que falta") |
 | `TERMOS_VERSAO`    | não         | `2026-10`                                 | versão atual dos termos de uso                   |
 
 **Gerar um `JWT_SECRET`** no PowerShell:
@@ -140,7 +141,7 @@ Limites do plano grátis:
 As tabelas são criadas pelos arquivos em `src/main/resources/db/migration`.
 
 - **Nunca edite** um arquivo de migração que já foi enviado (ex.: `V1__schema_inicial.sql`).
-- Para mudar algo, **crie um arquivo novo** com o próximo número: `V7__descricao_da_mudanca.sql`.
+- Para mudar algo, **crie um arquivo novo** com o próximo número: `V8__descricao_da_mudanca.sql`.
 
 ## Endpoints (para o front)
 
@@ -156,6 +157,8 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | POST   | `/auth/logout`   | não                   | encerra a sessão daquele dispositivo        |
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
+| GET    | `/me/vagas`      | sim                   | vagas da pessoa com o match (maior % primeiro) |
+| GET    | `/me/vagas/{id}` | sim                   | uma vaga com o match                        |
 | PUT    | `/me/senha`      | sim                   | troca a senha                               |
 | DELETE | `/me`            | sim                   | exclui a conta e todos os dados             |
 | POST   | `/me/aceites`    | sim                   | registra um aceite (termos ou maioridade)   |
@@ -205,7 +208,8 @@ O campo `perfil` é **exatamente o `Profile`** de `frontend/src/types/profile.ts
     "curso": "Análise e Desenvolvimento de Sistemas",
     "experiencias": ["projeto"],
     "habilidades": ["Excel", "Comunicação"],
-    "idiomas": [{ "idioma": "Inglês", "nivel": "basico" }]
+    "idiomas": [{ "idioma": "Inglês", "nivel": "basico" }],
+    "cargosDesejados": ["Analista de Dados", "Assistente Administrativo"]
   },
   "senha": "minhasenha123",
   "aceiteTermos": { "versao": "2026-10" },
@@ -215,6 +219,7 @@ O campo `perfil` é **exatamente o `Profile`** de `frontend/src/types/profile.ts
 
 - `aceiteTermos`: **obrigatório**. É o checkbox dos termos com "Tenho 14 anos ou mais". Sem ele (ou com versão diferente da atual), a conta não é criada.
 
+- `cargosDesejados`: até 3 textos. Lista vazia = "ainda não sei".
 - `senha`: de 8 a 72 caracteres.
 - `dispositivo`: `WEB`, `ANDROID` ou `IOS` (se não enviar, vale `WEB`).
 - Os valores das listas (ex.: `"estagio"`) precisam ser os mesmos do `profile.ts`. Valores diferentes são recusados.
@@ -263,6 +268,31 @@ Só funciona quando `GOOGLE_CLIENT_ID` estiver configurado (o mesmo Client ID us
 
 Envie o `Profile` completo (mesmo formato do cadastro, sem a senha). O e-mail não muda por aqui.
 Exige que a pessoa tenha aceitado os termos (senão responde **403**).
+
+### `GET /me/vagas` e `GET /me/vagas/{id}`
+
+`GET /me/vagas?limite=50` (de 1 a 100) devolve uma lista, da maior porcentagem para a menor, só com vagas abertas.
+`GET /me/vagas/{id}` devolve uma (o `id` é o `vaga.id`). Formato de cada item:
+
+```json
+{
+  "vaga": {
+    "id": "…", "fonte": "gupy", "titulo": "Estágio em Dados", "empresa": "Empresa X",
+    "cidade": "São Paulo", "uf": "SP", "modelo": "hibrido", "contrato": "estagio", "senioridade": "estagio",
+    "ferramentas": ["SQL", "Excel"], "anosExperiencia": null,
+    "publicadaEm": "2026-10-25", "prazoInscricao": null, "url": "https://...", "descricao": "..."
+  },
+  "match": {
+    "percentual": 82,
+    "porQueCombina": "Pede Excel e SQL, e você tem os dois.",
+    "oQueFalta": [{ "item": "Power BI", "tipo": "habilidade", "impacto": 18 }],
+    "oQueFaltaBloqueado": false
+  }
+}
+```
+
+- No plano **Grátis**: `oQueFalta` vem `[]` e `oQueFaltaBloqueado` vem `true`.
+- Para testar o "o que falta" sem pagamento, rode a API com `PLANOS_LIBERAR_TUDO=true` (nunca no servidor de verdade).
 
 ### `PUT /me/senha`
 
@@ -376,6 +406,42 @@ Resposta:
 ```json
 { "recebidas": 120, "novas": 80, "atualizadas": 38, "recusadas": [ { "indice": 7, "motivo": "url vazia" } ] }
 ```
+
+#### `GET /interno/perfis?pagina=0&tamanho=100`
+
+Perfis para o match calcular, **sem nome e sem e-mail**. Só aparecem perfis completos de quem aceitou os termos.
+Continue pedindo a próxima `pagina` enquanto `temMais` for `true`.
+
+```json
+{ "perfis": [ { "usuarioId": "…", "perfil": { "...Profile, com cargosDesejados..." } } ], "pagina": 0, "temMais": false }
+```
+
+#### `POST /interno/matches`
+
+Grava o resultado do match (até **1000 por envio**). O mesmo par pessoa + vaga é atualizado, não duplica.
+
+```json
+{
+  "matches": [
+    {
+      "usuarioId": "…",
+      "fonte": "gupy",
+      "id_fonte": "123456",
+      "percentual": 82,
+      "nota_filtros": 90,
+      "nota_afinidade": 75,
+      "por_que_combina": "Pede Excel e SQL, e você tem os dois.",
+      "o_que_falta": [ { "item": "Power BI", "tipo": "habilidade", "impacto": 18 } ]
+    }
+  ]
+}
+```
+
+- A vaga precisa já existir (enviada antes em `/interno/vagas`).
+- Regra do time: se `o_que_falta` tiver itens, **percentual + soma dos impacto = 100** (folga de 1 ponto). Senão, só
+  aquele match é recusado.
+- Nomes também em camelCase (`idFonte`, `porQueCombina`, `oQueFalta`...).
+- Resposta: `{ "recebidos": 10, "novos": 8, "atualizados": 2, "recusados": [ { "indice": 3, "motivo": "..." } ] }`
 
 #### `POST /interno/vagas/expirar`
 

@@ -74,6 +74,11 @@ public class Perfil {
     @JdbcTypeCode(SqlTypes.ARRAY)
     private List<String> habilidades = new ArrayList<>();
 
+    /** Até 3 cargos que a pessoa procura (V7). Vazia = "ainda não sei". */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "cargos_desejados", nullable = false)
+    private List<String> cargosDesejados = new ArrayList<>();
+
     /** Lista de idiomas guardada como JSON, ex.: [{"idioma":"Inglês","nivel":"basico"}] */
     @ColumnTransformer(write = "?::jsonb")
     @Column(columnDefinition = "jsonb", nullable = false)
@@ -168,6 +173,9 @@ public class Perfil {
 
     public List<String> getHabilidades() { return habilidades; }
     public void setHabilidades(List<String> habilidades) { this.habilidades = habilidades; }
+
+    public List<String> getCargosDesejados() { return cargosDesejados; }
+    public void setCargosDesejados(List<String> cargosDesejados) { this.cargosDesejados = cargosDesejados; }
 
     public String getIdiomas() { return idiomas; }
     public void setIdiomas(String idiomas) { this.idiomas = idiomas; }

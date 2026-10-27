@@ -10,6 +10,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -59,6 +60,13 @@ public class ApiExceptionHandler {
         log.warn("Banco recusou os dados: {}", e.getMostSpecificCause().getMessage());
         return ResponseEntity.badRequest()
                 .body(new Erro("Algum valor enviado não é aceito. Confira as opções do cadastro.", Map.of()));
+    }
+
+    /** Parâmetro com formato errado (ex.: id de vaga que não é um UUID). */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Erro> tipoErrado(MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.badRequest()
+                .body(new Erro("Parâmetro inválido: " + e.getName() + ".", Map.of()));
     }
 
     /** Arquivo maior que o limite (spring.servlet.multipart.max-file-size). */

@@ -32,6 +32,8 @@ public record PerfilDto(
         String tempoExperiencia,
         List<String> habilidades,
         List<Idioma> idiomas,
+        /** Até 3 cargos que a pessoa procura. Lista vazia = "ainda não sei". */
+        List<String> cargosDesejados,
 
         @NotBlank(message = "Informe seu e-mail.")
         @Email(message = "Esse e-mail não parece válido.")
