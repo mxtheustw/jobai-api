@@ -22,8 +22,11 @@ RUN ./mvnw -B -q package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Não roda como administrador (root)
-RUN useradd --system --uid 1001 app
+# Não roda como administrador (root). A pasta "dados" (currículos) precisa
+# pertencer a esse usuário, senão a API não consegue criá-la ao ligar.
+RUN useradd --system --uid 1001 app \
+    && mkdir -p /app/dados/curriculos \
+    && chown -R app /app/dados
 COPY --from=build /app/target/*.jar app.jar
 USER app
 
