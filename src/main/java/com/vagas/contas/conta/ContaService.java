@@ -4,6 +4,7 @@ import com.vagas.contas.curriculo.ArmazenamentoCurriculos;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.perfil.Perfil;
 import com.vagas.contas.perfil.PerfilRepository;
+import com.vagas.contas.seguranca.LimiteTentativas;
 import com.vagas.contas.usuario.Usuario;
 import com.vagas.contas.usuario.UsuarioRepository;
 import org.slf4j.Logger;
@@ -33,15 +34,18 @@ public class ContaService {
     private final PerfilRepository perfilRepository;
     private final ArmazenamentoCurriculos armazenamento;
     private final PasswordEncoder passwordEncoder;
+    private final LimiteTentativas limiteTentativas;
 
     public ContaService(UsuarioRepository usuarioRepository,
                         PerfilRepository perfilRepository,
                         ArmazenamentoCurriculos armazenamento,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder,
+                        LimiteTentativas limiteTentativas) {
         this.usuarioRepository = usuarioRepository;
         this.perfilRepository = perfilRepository;
         this.armazenamento = armazenamento;
         this.passwordEncoder = passwordEncoder;
+        this.limiteTentativas = limiteTentativas;
     }
 
     /**
@@ -57,7 +61,10 @@ public class ContaService {
             if (senha == null || senha.isBlank()) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Digite sua senha para confirmar a exclusão.");
             }
+            String chave = "excluir:" + usuarioId;
+            limiteTentativas.verificar(chave);
             if (!passwordEncoder.matches(senha, usuario.getSenhaHash())) {
+                limiteTentativas.registrarFalha(chave);
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Senha incorreta. A conta não foi excluída.");
             }
         }

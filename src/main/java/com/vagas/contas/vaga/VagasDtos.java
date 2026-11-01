@@ -46,10 +46,13 @@ public final class VagasDtos {
             Integer percentual,
             String porQueCombina,
             List<FaltaItem> oQueFalta,
-            boolean oQueFaltaBloqueado
+            boolean oQueFaltaBloqueado,
+            /** true quando o match é alto (a partir de 80%): ganha o selo amarelo no site. */
+            boolean destaque
     ) {
     }
 
+    /** match vem null nas "outras vagas que encontramos" (sem porcentagem). */
     public record VagaComMatch(VagaDto vaga, MatchDto match) {
     }
 

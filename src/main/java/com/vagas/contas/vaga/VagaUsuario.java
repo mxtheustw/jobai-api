@@ -55,6 +55,10 @@ public class VagaUsuario {
     @Column(name = "calculado_em")
     private Instant calculadoEm;
 
+    /** Quando a vaga foi liberada para a pessoa ver (controle das 3 por semana do Grátis). */
+    @Column(name = "liberada_em")
+    private Instant liberadaEm;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm = Instant.now();
 
@@ -76,6 +80,13 @@ public class VagaUsuario {
         this.calculadoEm = Instant.now();
     }
 
+    public void liberar() {
+        if (this.liberadaEm == null) {
+            this.liberadaEm = Instant.now();
+        }
+    }
+
+    public Instant getLiberadaEm() { return liberadaEm; }
     public UUID getUsuarioId() { return usuarioId; }
     public UUID getVagaId() { return vagaId; }
     public String getSituacao() { return situacao; }

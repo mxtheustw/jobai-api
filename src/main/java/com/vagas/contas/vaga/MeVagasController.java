@@ -30,6 +30,13 @@ public class MeVagasController {
         return meVagasService.listar(UUID.fromString(jwt.getSubject()), limite);
     }
 
+    /** "Outras vagas que encontramos": sem porcentagem (match = null). ?limite= de 1 a 100 (padrão 20). */
+    @GetMapping("/outras")
+    public List<VagaComMatch> outras(@AuthenticationPrincipal Jwt jwt,
+                                     @RequestParam(defaultValue = "20") int limite) {
+        return meVagasService.outras(UUID.fromString(jwt.getSubject()), limite);
+    }
+
     @GetMapping("/{vagaId}")
     public VagaComMatch buscar(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID vagaId) {
         return meVagasService.buscar(UUID.fromString(jwt.getSubject()), vagaId);

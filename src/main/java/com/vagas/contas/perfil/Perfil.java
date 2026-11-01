@@ -74,6 +74,14 @@ public class Perfil {
     @JdbcTypeCode(SqlTypes.ARRAY)
     private List<String> habilidades = new ArrayList<>();
 
+    /** Até 5 cidades onde quer trabalhar (V8), em JSON: [{"cidade":"Campinas","uf":"SP"}] */
+    @ColumnTransformer(write = "?::jsonb")
+    @Column(name = "cidades_trabalho", columnDefinition = "jsonb", nullable = false)
+    private String cidadesTrabalho = "[]";
+
+    @Column(name = "qualquer_cidade", nullable = false)
+    private boolean qualquerCidade;
+
     /** Até 3 cargos que a pessoa procura (V7). Vazia = "ainda não sei". */
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "cargos_desejados", nullable = false)
@@ -173,6 +181,12 @@ public class Perfil {
 
     public List<String> getHabilidades() { return habilidades; }
     public void setHabilidades(List<String> habilidades) { this.habilidades = habilidades; }
+
+    public String getCidadesTrabalho() { return cidadesTrabalho; }
+    public void setCidadesTrabalho(String cidadesTrabalho) { this.cidadesTrabalho = cidadesTrabalho; }
+
+    public boolean isQualquerCidade() { return qualquerCidade; }
+    public void setQualquerCidade(boolean qualquerCidade) { this.qualquerCidade = qualquerCidade; }
 
     public List<String> getCargosDesejados() { return cargosDesejados; }
     public void setCargosDesejados(List<String> cargosDesejados) { this.cargosDesejados = cargosDesejados; }

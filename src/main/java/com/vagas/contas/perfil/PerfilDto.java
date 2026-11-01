@@ -34,6 +34,10 @@ public record PerfilDto(
         List<Idioma> idiomas,
         /** Até 3 cargos que a pessoa procura. Lista vazia = "ainda não sei". */
         List<String> cargosDesejados,
+        /** Até 5 cidades onde a pessoa quer trabalhar (a cidade onde mora fica em "local"). */
+        List<Local> cidadesTrabalho,
+        /** true = aceita qualquer cidade (aí cidadesTrabalho vem vazia). */
+        Boolean qualquerCidade,
 
         @NotBlank(message = "Informe seu e-mail.")
         @Email(message = "Esse e-mail não parece válido.")

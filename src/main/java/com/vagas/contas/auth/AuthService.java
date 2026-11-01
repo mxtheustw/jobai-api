@@ -10,6 +10,7 @@ import com.vagas.contas.auth.AuthDtos.TrocarSenhaRequest;
 import com.vagas.contas.auth.AuthDtos.UsuarioResponse;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.perfil.PerfilDto;
+import com.vagas.contas.seguranca.LimiteTentativas;
 import com.vagas.contas.perfil.PerfilService;
 import com.vagas.contas.usuario.Usuario;
 import com.vagas.contas.usuario.UsuarioRepository;
@@ -36,6 +37,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final AceiteService aceiteService;
+    private final LimiteTentativas limiteTentativas;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        SessaoRepository sessaoRepository,
@@ -43,7 +45,8 @@ public class AuthService {
                        TokenService tokenService,
                        PasswordEncoder passwordEncoder,
                        GoogleTokenVerifier googleTokenVerifier,
-                       AceiteService aceiteService) {
+                       AceiteService aceiteService,
+                       LimiteTentativas limiteTentativas) {
         this.usuarioRepository = usuarioRepository;
         this.sessaoRepository = sessaoRepository;
         this.perfilService = perfilService;
@@ -51,6 +54,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.googleTokenVerifier = googleTokenVerifier;
         this.aceiteService = aceiteService;
+        this.limiteTentativas = limiteTentativas;
     }
 
     /** Cria a conta + o perfil e já devolve a pessoa logada. */
@@ -76,12 +80,19 @@ public class AuthService {
 
     @Transactional
     public TokensResponse entrar(LoginRequest req) {
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(normalizarEmail(req.email()))
-                .filter(Usuario::isAtivo)
-                .filter(u -> u.getSenhaHash() != null && passwordEncoder.matches(req.senha(), u.getSenhaHash()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, CREDENCIAIS_INVALIDAS));
+        String email = normalizarEmail(req.email());
+        String chave = "login:" + email;
+        limiteTentativas.verificar(chave);  // muitas senhas erradas seguidas para esse e-mail? bloqueia
 
-        return responder(usuario, Dispositivo.de(req.dispositivo()), false);
+        Optional<Usuario> usuario = usuarioRepository.findByEmailIgnoreCase(email)
+                .filter(Usuario::isAtivo)
+                .filter(u -> u.getSenhaHash() != null && passwordEncoder.matches(req.senha(), u.getSenhaHash()));
+        if (usuario.isEmpty()) {
+            limiteTentativas.registrarFalha(chave);
+            throw new ApiException(HttpStatus.UNAUTHORIZED, CREDENCIAIS_INVALIDAS);
+        }
+        limiteTentativas.limpar(chave);
+        return responder(usuario.get(), Dispositivo.de(req.dispositivo()), false);
     }
 
     /** Troca um refreshToken válido por tokens novos (o antigo deixa de valer). */
@@ -152,9 +163,13 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST,
                     "Sua conta entra pelo Google, então não tem senha para trocar.");
         }
+        String chave = "senha:" + usuarioId;
+        limiteTentativas.verificar(chave);
         if (!passwordEncoder.matches(req.senhaAtual(), usuario.getSenhaHash())) {
+            limiteTentativas.registrarFalha(chave);
             throw new ApiException(HttpStatus.BAD_REQUEST, "A senha atual está incorreta.");
         }
+        limiteTentativas.limpar(chave);
         if (passwordEncoder.matches(req.novaSenha(), usuario.getSenhaHash())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "A nova senha precisa ser diferente da atual.");
         }

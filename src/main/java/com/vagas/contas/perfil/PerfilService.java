@@ -27,6 +27,8 @@ public class PerfilService {
 
     private static final TypeReference<List<PerfilDto.Idioma>> LISTA_IDIOMAS = new TypeReference<>() {
     };
+    private static final TypeReference<List<PerfilDto.Local>> LISTA_CIDADES = new TypeReference<>() {
+    };
 
     private final PerfilRepository perfilRepository;
     private final UsuarioRepository usuarioRepository;
@@ -172,6 +174,27 @@ public class PerfilService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Cada cargo pode ter até 100 caracteres.");
         }
         p.setCargosDesejados(cargos);
+
+        // Cidades onde quer trabalhar: até 5, ou "qualquer cidade" (aí a lista fica vazia)
+        boolean qualquer = Boolean.TRUE.equals(dto.qualquerCidade());
+        List<PerfilDto.Local> cidades = new ArrayList<>();
+        if (!qualquer && dto.cidadesTrabalho() != null) {
+            for (PerfilDto.Local c : dto.cidadesTrabalho()) {
+                if (c == null) continue;
+                String cidade = texto(c.cidade());
+                String uf = texto(c.uf());
+                if (cidade == null || uf == null || uf.length() != 2) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Cada cidade precisa de nome e UF (ex.: SP).");
+                }
+                PerfilDto.Local limpa = new PerfilDto.Local(cidade, uf.toUpperCase(Locale.ROOT));
+                if (!cidades.contains(limpa)) cidades.add(limpa);
+            }
+        }
+        if (cidades.size() > 5) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Escolha até 5 cidades.");
+        }
+        p.setQualquerCidade(qualquer);
+        p.setCidadesTrabalho(json.writeValueAsString(cidades));
         List<PerfilDto.Idioma> idiomas = dto.idiomas() == null ? List.of() : dto.idiomas();
         p.setIdiomas(json.writeValueAsString(idiomas));
     }
@@ -204,6 +227,8 @@ public class PerfilService {
                 p.getHabilidades(),
                 idiomas,
                 p.getCargosDesejados(),
+                json.readValue(p.getCidadesTrabalho(), LISTA_CIDADES),
+                p.isQualquerCidade(),
                 u == null ? null : u.getEmail()
         );
     }

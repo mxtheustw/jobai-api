@@ -131,7 +131,12 @@ public class MatchService {
         if (!vagas.containsKey(m.fonte().trim().toLowerCase(Locale.ROOT) + "|" + m.idFonte().trim())) {
             return "vaga não existe (envie ela antes em /interno/vagas)";
         }
-        if (m.percentual() == null || m.percentual() < 0 || m.percentual() > 100) return "percentual fora de 0 a 100";
+        // percentual nulo = "vaga encontrada sem match" (vai para as "outras vagas"); aí não pode ter "o que falta"
+        if (m.percentual() == null) {
+            return (m.oQueFalta() == null || m.oQueFalta().isEmpty()) ? null
+                    : "vaga sem percentual não pode ter oQueFalta";
+        }
+        if (m.percentual() < 0 || m.percentual() > 100) return "percentual fora de 0 a 100";
         if (foraDe0a100(m.notaFiltros()) || foraDe0a100(m.notaAfinidade())) return "nota fora de 0 a 100";
 
         List<FaltaItem> falta = m.oQueFalta() == null ? List.of() : m.oQueFalta();

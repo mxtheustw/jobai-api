@@ -141,7 +141,7 @@ Limites do plano grátis:
 As tabelas são criadas pelos arquivos em `src/main/resources/db/migration`.
 
 - **Nunca edite** um arquivo de migração que já foi enviado (ex.: `V1__schema_inicial.sql`).
-- Para mudar algo, **crie um arquivo novo** com o próximo número: `V8__descricao_da_mudanca.sql`.
+- Para mudar algo, **crie um arquivo novo** com o próximo número: `V9__descricao_da_mudanca.sql`.
 
 ## Endpoints (para o front)
 
@@ -158,6 +158,7 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
 | GET    | `/me/vagas`      | sim                   | vagas da pessoa com o match (maior % primeiro) |
+| GET    | `/me/vagas/outras` | sim                 | "outras vagas que encontramos" (sem %)      |
 | GET    | `/me/vagas/{id}` | sim                   | uma vaga com o match                        |
 | PUT    | `/me/senha`      | sim                   | troca a senha                               |
 | DELETE | `/me`            | sim                   | exclui a conta e todos os dados             |
@@ -209,7 +210,9 @@ O campo `perfil` é **exatamente o `Profile`** de `frontend/src/types/profile.ts
     "experiencias": ["projeto"],
     "habilidades": ["Excel", "Comunicação"],
     "idiomas": [{ "idioma": "Inglês", "nivel": "basico" }],
-    "cargosDesejados": ["Analista de Dados", "Assistente Administrativo"]
+    "cargosDesejados": ["Analista de Dados", "Assistente Administrativo"],
+    "cidadesTrabalho": [{ "cidade": "Campinas", "uf": "SP" }],
+    "qualquerCidade": false
   },
   "senha": "minhasenha123",
   "aceiteTermos": { "versao": "2026-10" },
@@ -220,6 +223,8 @@ O campo `perfil` é **exatamente o `Profile`** de `frontend/src/types/profile.ts
 - `aceiteTermos`: **obrigatório**. É o checkbox dos termos com "Tenho 14 anos ou mais". Sem ele (ou com versão diferente da atual), a conta não é criada.
 
 - `cargosDesejados`: até 3 textos. Lista vazia = "ainda não sei".
+- `cidadesTrabalho`: até 5 `{ cidade, uf }` onde a pessoa quer trabalhar (a cidade onde mora fica em `local`).
+  `qualquerCidade: true` aceita qualquer cidade, e aí a lista vem vazia. Remoto depende de `modalidades`.
 - `senha`: de 8 a 72 caracteres.
 - `dispositivo`: `WEB`, `ANDROID` ou `IOS` (se não enviar, vale `WEB`).
 - Os valores das listas (ex.: `"estagio"`) precisam ser os mesmos do `profile.ts`. Valores diferentes são recusados.
@@ -286,12 +291,20 @@ Exige que a pessoa tenha aceitado os termos (senão responde **403**).
     "percentual": 82,
     "porQueCombina": "Pede Excel e SQL, e você tem os dois.",
     "oQueFalta": [{ "item": "Power BI", "tipo": "habilidade", "impacto": 18 }],
-    "oQueFaltaBloqueado": false
+    "oQueFaltaBloqueado": false,
+    "destaque": true
   }
 }
 ```
 
-- No plano **Grátis**: `oQueFalta` vem `[]` e `oQueFaltaBloqueado` vem `true`.
+- `destaque`: `true` quando o percentual é **80 ou mais** (selo amarelo).
+- No plano **Grátis**:
+  - aparecem só **3 vagas novas por semana** (segunda a domingo), as de maior %. Elas são "liberadas" na primeira vez
+    que a pessoa abre o feed na semana e continuam aparecendo nas semanas seguintes (enquanto a vaga estiver aberta);
+  - `oQueFalta` vem `[]` e `oQueFaltaBloqueado` vem `true`;
+  - `GET /me/vagas/{id}` de uma vaga não liberada responde **404**.
+- `GET /me/vagas/outras?limite=20`: vagas sem porcentagem ("outras vagas que encontramos"), com `match: null`,
+  das mais recentes para as mais antigas. O site decide quando mostrar (ex.: quando vierem poucas vagas com match).
 - Para testar o "o que falta" sem pagamento, rode a API com `PLANOS_LIBERAR_TUDO=true` (nunca no servidor de verdade).
 
 ### `PUT /me/senha`
@@ -438,6 +451,8 @@ Grava o resultado do match (até **1000 por envio**). O mesmo par pessoa + vaga 
 ```
 
 - A vaga precisa já existir (enviada antes em `/interno/vagas`).
+- **Vaga sem match** (ex.: as que vêm de busca no Google): mande `percentual: null` e `o_que_falta` vazio.
+  Ela vai para `GET /me/vagas/outras`.
 - Regra do time: se `o_que_falta` tiver itens, **percentual + soma dos impacto = 100** (folga de 1 ponto). Senão, só
   aquele match é recusado.
 - Nomes também em camelCase (`idFonte`, `porQueCombina`, `oQueFalta`...).
@@ -470,5 +485,6 @@ Todo erro vem neste formato, pronto para mostrar na tela:
 | 403    | termos ainda não aceitos (salvar perfil, enviar currículo) |
 | 404    | currículo não enviado                               |
 | 409    | já existe conta com esse e-mail                     |
+| 429    | muitas senhas erradas seguidas (5 em 15 min): login, trocar senha e excluir conta |
 | 413    | arquivo maior que 5 MB                              |
 | 503    | "Entrar com Google" ainda não configurado           |
