@@ -139,4 +139,8 @@ public class Usuario {
     public boolean isAtivo() {
         return ativo;
     }
+
+    public Instant getCriadoEm() {
+        return criadoEm;
+    }
 }

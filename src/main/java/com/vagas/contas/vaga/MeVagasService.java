@@ -64,6 +64,27 @@ public class MeVagasService {
         return montarLista(vagaUsuarioRepository.liberadas(usuarioId, max), false);
     }
 
+    /**
+     * Para a exportação de dados (LGPD): as mesmas vagas que a pessoa vê no site, seguindo as regras do plano,
+     * mas sem o limite de 100 da tela.
+     */
+    @Transactional
+    public List<VagaComMatch> listarTodasParaExportar(UUID usuarioId) {
+        Limit max = Limit.of(5000);
+        if (planoService.temPlanoPago(usuarioId)) {
+            return montarLista(vagaUsuarioRepository.comMatch(usuarioId, max), true);
+        }
+        liberarVagasDaSemana(usuarioId);
+        return montarLista(vagaUsuarioRepository.liberadas(usuarioId, max), false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<VagaComMatch> outrasTodasParaExportar(UUID usuarioId) {
+        return vagaUsuarioRepository.semMatch(usuarioId, Limit.of(5000)).stream()
+                .map(linha -> new VagaComMatch(VagaDto.de((Vaga) linha[1]), null))
+                .toList();
+    }
+
     /** "Outras vagas que encontramos": sem porcentagem e sem "o que falta" (match = null). */
     @Transactional(readOnly = true)
     public List<VagaComMatch> outras(UUID usuarioId, int limite) {

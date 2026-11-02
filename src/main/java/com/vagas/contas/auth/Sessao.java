@@ -69,4 +69,12 @@ public class Sessao {
     public Dispositivo getDispositivo() {
         return dispositivo;
     }
+
+    public Instant getCriadoEm() {
+        return criadoEm;
+    }
+
+    public Instant getExpiraEm() {
+        return expiraEm;
+    }
 }

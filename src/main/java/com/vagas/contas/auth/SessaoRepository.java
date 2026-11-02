@@ -5,12 +5,15 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface SessaoRepository extends JpaRepository<Sessao, UUID> {
 
     Optional<Sessao> findByTokenHash(String tokenHash);
+
+    List<Sessao> findByUsuarioIdOrderByCriadoEmDesc(UUID usuarioId);
 
     /** Encerra TODAS as sessões de uma pessoa (ex.: depois de trocar a senha). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

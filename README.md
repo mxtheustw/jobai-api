@@ -167,6 +167,7 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | GET    | `/me/vagas/{id}` | sim                   | uma vaga com o match                        |
 | PUT    | `/me/senha`      | sim                   | troca a senha                               |
 | DELETE | `/me`            | sim                   | exclui a conta e todos os dados             |
+| GET    | `/me/exportar`   | sim                   | baixa um arquivo com todos os dados da pessoa (LGPD) |
 | POST   | `/me/aceites`    | sim                   | registra um aceite (termos ou maioridade)   |
 | POST   | `/me/curriculo`  | sim                   | envia ou substitui o currículo (PDF)        |
 | GET    | `/me/curriculo`  | sim                   | baixa o currículo enviado                   |
@@ -361,6 +362,24 @@ o link aparece no log da API, para testar.
   (o site deve pedir uma confirmação na tela antes).
 - Resposta: **204** (sem corpo). Depois disso, apague os tokens guardados no site/app.
 - ⚠️ Quando existirem pagamentos, a exclusão também vai precisar cancelar a assinatura no meio de pagamento.
+
+### `GET /me/exportar` (Baixar meus dados)
+
+Direito de acesso e portabilidade da LGPD. Devolve um arquivo `meus-dados-jobai.json` com:
+
+| Campo           | O que tem                                                                 |
+|-----------------|---------------------------------------------------------------------------|
+| `conta`         | id, nome, e-mail, forma de entrar, id do Google (se tiver), data de criação |
+| `perfil`        | o perfil completo (mesmo formato do `GET /me`)                            |
+| `curriculo`     | nome, tamanho e data do currículo (o arquivo em si fica em `GET /me/curriculo`) |
+| `plano`         | `GRATIS` ou `PAGO`                                                        |
+| `aceites`       | termos e declarações aceitos, com versão e data                          |
+| `sessoes`       | dispositivos em que a pessoa entrou, quando, e se ainda estão ativos     |
+| `vagasComMatch` | as vagas com match, **seguindo as regras do plano** (igual ao `GET /me/vagas`) |
+| `outrasVagas`   | as "outras vagas que encontramos"                                         |
+
+**Não entram:** a senha (nem criptografada) e os códigos de login. No site, basta um botão "Baixar meus dados"
+que chama a rota com o token e salva a resposta como arquivo.
 
 ### `POST /me/aceites`
 
