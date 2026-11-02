@@ -126,7 +126,10 @@ public class RedefinicaoSenhaService {
     }
 
     private static String html(String nome, String mensagem, String link) {
-        String ola = nome == null ? "Oi!" : "Oi, " + escapar(nome.split(" ")[0]) + "!";
+        String primeiro = nome == null ? "" : nome.trim().split("\\s+")[0];
+        String ola = primeiro.isEmpty() ? "Oi!"
+                : "Oi, " + escapar(primeiro.substring(0, 1).toUpperCase(Locale.of("pt", "BR"))
+                + primeiro.substring(1)) + "!";
         String botao = link == null ? "" :
                 "<p><a href=\"" + link + "\" style=\"display:inline-block;padding:12px 20px;background:#E8B10E;"
                         + "color:#1D2B22;text-decoration:none;border-radius:6px;font-weight:bold\">Criar senha nova</a></p>"
