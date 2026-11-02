@@ -102,6 +102,32 @@ Na primeira execução, o Flyway cria todas as tabelas sozinho.
 
 Para parar: `Ctrl + C`.
 
+## Testes automáticos
+
+São programas que conferem sozinhos se a API continua funcionando: cadastro, login, bloqueio por senhas erradas,
+"esqueci minha senha", plano Grátis (3 vagas por semana), rotas internas, exportar dados e excluir conta.
+**Rode antes de mandar qualquer mudança para a `main`.**
+
+Os testes usam um banco **separado**, só deles: `contas_teste`, no PostgreSQL do seu PC. Nunca o Supabase.
+
+### Preparar (uma vez só)
+
+1. No **pgAdmin**: clique com o botão direito em **Databases** → **Create** → **Database...** → nome `contas_teste` → **Save**.
+2. Crie a variável de ambiente `DB_PASSWORD_TESTE` com a senha do PostgreSQL **do seu PC**
+   (a mesma que você usa no pgAdmin). Feche e abra o terminal depois.
+
+### Rodar
+
+```
+cd backend\api-contas
+.\mvnw.cmd test
+```
+
+No fim aparece `Tests run: X, Failures: 0, Errors: 0` e **BUILD SUCCESS**. Se algum falhar, o nome do teste
+diz o que quebrou (ex.: `AuthTest.bloqueiaDepoisDe5SenhasErradas`).
+
+Os testes ficam em `src/test/java/com/vagas/contas/`. Nenhum e-mail sai de verdade: o envio é trocado por um "dublê".
+
 ## Hospedagem (Render, plano grátis)
 
 A API roda no **Render** a partir do `Dockerfile` desta pasta.
