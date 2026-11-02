@@ -2,6 +2,7 @@ package com.vagas.contas.vaga;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +29,8 @@ public final class VagasDtos {
             Integer anosExperiencia,
             LocalDate publicadaEm,
             LocalDate prazoInscricao,
+            /** Quando o coletor encontrou a vaga (sempre preenchido; útil quando publicadaEm vem nulo). */
+            Instant encontradaEm,
             String url,
             String descricao
     ) {
@@ -35,7 +38,7 @@ public final class VagasDtos {
             return new VagaDto(v.getId(), v.getFonte(), v.getTitulo(), v.getEmpresa(), v.getCidade(), v.getUf(),
                     v.getModelo(), v.getContrato(), v.getSenioridade(), v.getFerramentas(),
                     v.getAnosExperiencia() == null ? null : v.getAnosExperiencia().intValue(),
-                    v.getPublicadaEm(), v.getPrazoInscricao(), v.getUrl(), v.getDescricao());
+                    v.getPublicadaEm(), v.getPrazoInscricao(), v.getCriadaEm(), v.getUrl(), v.getDescricao());
         }
     }
 

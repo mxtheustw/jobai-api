@@ -285,7 +285,8 @@ Exige que a pessoa tenha aceitado os termos (senão responde **403**).
     "id": "…", "fonte": "gupy", "titulo": "Estágio em Dados", "empresa": "Empresa X",
     "cidade": "São Paulo", "uf": "SP", "modelo": "hibrido", "contrato": "estagio", "senioridade": "estagio",
     "ferramentas": ["SQL", "Excel"], "anosExperiencia": null,
-    "publicadaEm": "2026-10-25", "prazoInscricao": null, "url": "https://...", "descricao": "..."
+    "publicadaEm": "2026-10-25", "prazoInscricao": null, "encontradaEm": "2026-10-26T09:12:00Z",
+    "url": "https://...", "descricao": "..."
   },
   "match": {
     "percentual": 82,
@@ -297,6 +298,7 @@ Exige que a pessoa tenha aceitado os termos (senão responde **403**).
 }
 ```
 
+- `encontradaEm`: quando o coletor achou a vaga. Sempre vem preenchido (use quando `publicadaEm` vier `null`).
 - `destaque`: `true` quando o percentual é **80 ou mais** (selo amarelo).
 - No plano **Grátis**:
   - aparecem só **3 vagas novas por semana** (segunda a domingo), as de maior %. Elas são "liberadas" na primeira vez
@@ -353,6 +355,9 @@ Se alguém entrar pelo Google na tela de **login** sem ter conta: o `GET /me` ve
 e `perfilCompleto: false` → mostre os termos e mande para o cadastro.
 
 ### Currículo: `POST /me/curriculo`
+
+> ⚠️ **Desligado na primeira versão** (responde **503**): o JobAI não guarda currículos, como diz a política de
+> privacidade. Para religar no futuro: `CURRICULOS_HABILITADO=true`.
 
 - Formato **multipart/form-data**, com o arquivo no campo `arquivo`.
 - Só **PDF**, até **5 MB**. Enviar outro substitui o anterior.

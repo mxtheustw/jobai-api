@@ -57,7 +57,9 @@ public class ApiExceptionHandler {
     /** O banco recusou algum valor (ex.: opção que não existe no cadastro). */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Erro> banco(DataIntegrityViolationException e) {
-        log.warn("Banco recusou os dados: {}", e.getMostSpecificCause().getMessage());
+        // Só a primeira linha: o "Detail" do Postgres repete os valores da linha (dados pessoais)
+        String msg = String.valueOf(e.getMostSpecificCause().getMessage());
+        log.warn("Banco recusou os dados: {}", msg.lines().findFirst().orElse(""));
         return ResponseEntity.badRequest()
                 .body(new Erro("Algum valor enviado não é aceito. Confira as opções do cadastro.", Map.of()));
     }

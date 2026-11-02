@@ -124,4 +124,5 @@ public class Vaga {
     public String getDescricao() { return descricao; }
     public boolean isAtiva() { return ativa; }
     public Instant getVistaPorUltimoEm() { return vistaPorUltimoEm; }
+    public Instant getCriadaEm() { return criadaEm; }
 }

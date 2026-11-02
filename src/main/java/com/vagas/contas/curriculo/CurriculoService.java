@@ -37,15 +37,18 @@ public class CurriculoService {
     private final ArmazenamentoCurriculos armazenamento;
     private final AceiteService aceiteService;
     private final long tamanhoMaximoMb;
+    private final boolean habilitado;
 
     public CurriculoService(PerfilRepository perfilRepository,
                             ArmazenamentoCurriculos armazenamento,
                             AceiteService aceiteService,
-                            @Value("${app.curriculos.tamanho-maximo-mb:5}") long tamanhoMaximoMb) {
+                            @Value("${app.curriculos.tamanho-maximo-mb:5}") long tamanhoMaximoMb,
+                            @Value("${app.curriculos.habilitado:false}") boolean habilitado) {
         this.perfilRepository = perfilRepository;
         this.armazenamento = armazenamento;
         this.aceiteService = aceiteService;
         this.tamanhoMaximoMb = tamanhoMaximoMb;
+        this.habilitado = habilitado;
     }
 
     /** Arquivo pronto para ser baixado. */
@@ -54,6 +57,10 @@ public class CurriculoService {
 
     @Transactional
     public CurriculoInfo enviar(UUID usuarioId, MultipartFile arquivo) {
+        // Na primeira versão o JobAI NÃO guarda currículos (é o que diz a política de privacidade)
+        if (!habilitado) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "O envio de currículo ainda não está disponível.");
+        }
         aceiteService.exigirTermos(usuarioId);
         if (arquivo == null || arquivo.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Escolha um arquivo para enviar.");
