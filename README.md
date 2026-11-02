@@ -52,6 +52,9 @@ Digite `\q` para sair.
 | `INTERNO_CHAVE`    | não         | vazio (rotas internas desligadas)         | chave do coletor/match para `/interno/**` (mínimo 32 caracteres) |
 | `PLANOS_LIBERAR_TUDO` | não      | `false`                                   | só para teste: trata todos como plano pago (mostra o "o que falta") |
 | `TERMOS_VERSAO`    | não         | `2026-10`                                 | versão atual dos termos de uso                   |
+| `BREVO_API_KEY`    | não         | vazio (e-mails só aparecem no log)        | chave da Brevo, que envia os e-mails             |
+| `EMAIL_REMETENTE`  | não         | vazio                                     | e-mail que aparece como remetente (validado na Brevo) |
+| `SITE_URL`         | não         | `http://localhost:3000`                   | endereço do site, usado nos links dos e-mails    |
 
 **Gerar um `JWT_SECRET`** no PowerShell:
 
@@ -113,7 +116,7 @@ A API roda no **Render** a partir do `Dockerfile` desta pasta.
 | Health Check Path      | `/saude`                               |
 
 Variáveis de ambiente no Render: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (**uma chave nova, só do servidor**),
-`GOOGLE_CLIENT_ID` e `CORS_ORIGENS`. A porta vem sozinha (`PORT`).
+`GOOGLE_CLIENT_ID`, `CORS_ORIGENS`, `INTERNO_CHAVE`, `BREVO_API_KEY`, `EMAIL_REMETENTE` e `SITE_URL`. A porta vem sozinha (`PORT`).
 
 Limites do plano grátis:
 - **Dorme depois de 15 minutos sem uso** e leva por volta de 1 minuto (ou mais) para acordar. O site pode chamar
@@ -155,6 +158,8 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | POST   | `/auth/google`   | não                   | entra (ou cria conta) com Google            |
 | POST   | `/auth/refresh`  | não                   | troca o refreshToken por tokens novos       |
 | POST   | `/auth/logout`   | não                   | encerra a sessão daquele dispositivo        |
+| POST   | `/auth/esqueci-senha`   | não            | manda por e-mail o link para criar senha nova |
+| POST   | `/auth/redefinir-senha` | não            | cria a senha nova com o código do link      |
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
 | GET    | `/me/vagas`      | sim                   | vagas da pessoa com o match (maior % primeiro) |
@@ -319,6 +324,30 @@ Exige que a pessoa tenha aceitado os termos (senão responde **403**).
 - Por segurança, **encerra a sessão em todos os dispositivos** e devolve tokens novos (mesmo formato do login)
   só para quem trocou. Guarde os tokens novos.
 - Contas que entram só pelo Google não têm senha: respondem 400.
+
+### Esqueci minha senha: `POST /auth/esqueci-senha` e `POST /auth/redefinir-senha`
+
+1. Na tela "Esqueci minha senha", o site manda:
+   ```json
+   { "email": "ana@email.com" }
+   ```
+   A resposta é **sempre** a mesma, exista ou não a conta (assim ninguém descobre quem está cadastrado):
+   ```json
+   { "mensagem": "Se existir uma conta com esse e-mail, enviamos um link para criar uma senha nova." }
+   ```
+   Se a conta existir, chega um e-mail com o link `SITE_URL/redefinir-senha?token=...`, que **vale por 1 hora**.
+   Só o último link pedido vale. Contas só do Google recebem um e-mail dizendo para entrar com o Google.
+   Limite: 5 pedidos a cada 15 minutos por e-mail (depois, 429).
+2. A página `/redefinir-senha` do site pega o `token` da URL e manda:
+   ```json
+   { "token": "o-token-da-url", "novaSenha": "minhasenhanova123" }
+   ```
+   - Resposta **204**: senha trocada. Mande a pessoa para o login.
+   - **Encerra a sessão em todos os dispositivos** e libera o login, se estava bloqueado por senhas erradas.
+   - Link usado, vencido ou inválido: **400** com `"Esse link é inválido ou já venceu. Peça um novo em \"Esqueci minha senha\"."`
+
+Os e-mails saem pela **Brevo**. Sem `BREVO_API_KEY`, nada é enviado; no seu PC (com `SITE_URL` em localhost),
+o link aparece no log da API, para testar.
 
 ### `DELETE /me`
 
@@ -490,6 +519,6 @@ Todo erro vem neste formato, pronto para mostrar na tela:
 | 403    | termos ainda não aceitos (salvar perfil, enviar currículo) |
 | 404    | currículo não enviado                               |
 | 409    | já existe conta com esse e-mail                     |
-| 429    | muitas senhas erradas seguidas (5 em 15 min): login, trocar senha e excluir conta |
+| 429    | muitas senhas erradas seguidas (5 em 15 min): login, trocar senha e excluir conta; ou muitos pedidos de "esqueci minha senha" |
 | 413    | arquivo maior que 5 MB                              |
 | 503    | "Entrar com Google" ainda não configurado           |
