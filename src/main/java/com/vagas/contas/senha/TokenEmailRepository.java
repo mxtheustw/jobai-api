@@ -13,6 +13,11 @@ public interface TokenEmailRepository extends JpaRepository<TokenEmail, UUID> {
 
     Optional<TokenEmail> findByTokenHash(String tokenHash);
 
+    /** Limpeza: apaga links vencidos ou já usados. */
+    @Modifying
+    @Query("delete from TokenEmail t where t.expiraEm < :agora or t.usadoEm is not null")
+    int apagarInuteis(@Param("agora") Instant agora);
+
     /** Invalida os links antigos ainda não usados (só o último pedido vale). */
     @Modifying
     @Query("update TokenEmail t set t.usadoEm = :agora "

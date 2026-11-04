@@ -102,6 +102,14 @@ Na primeira execução, o Flyway cria todas as tabelas sozinho.
 
 Para parar: `Ctrl + C`.
 
+## Limpeza automática do banco
+
+A própria API apaga, sozinha, o que não serve mais: **sessões vencidas ou encerradas** (logout, troca de senha,
+refresh já usado) e **links de "esqueci minha senha" vencidos ou já usados**. Roda 5 minutos depois que a API
+liga e, depois, a cada 6 horas. Quando apaga algo, aparece no log: `Limpeza do banco: X sessões e Y links...`.
+
+Economiza espaço no Supabase grátis e segue a LGPD (não guardar dados além do necessário).
+
 ## Testes automáticos
 
 São programas que conferem sozinhos se a API continua funcionando: cadastro, login, bloqueio por senhas erradas,

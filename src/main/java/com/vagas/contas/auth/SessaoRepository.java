@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,11 @@ public interface SessaoRepository extends JpaRepository<Sessao, UUID> {
     Optional<Sessao> findByTokenHash(String tokenHash);
 
     List<Sessao> findByUsuarioIdOrderByCriadoEmDesc(UUID usuarioId);
+
+    /** Limpeza: apaga sessões que não servem mais (vencidas ou encerradas). */
+    @Modifying
+    @Query("delete from Sessao s where s.expiraEm < :agora or s.revogado = true")
+    int apagarInuteis(@Param("agora") Instant agora);
 
     /** Encerra TODAS as sessões de uma pessoa (ex.: depois de trocar a senha). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
