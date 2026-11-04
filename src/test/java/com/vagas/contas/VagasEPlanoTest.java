@@ -16,6 +16,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Rotas internas (coletor e match) e as regras do plano Grátis no feed. */
 class VagasEPlanoTest extends TesteBase {
 
+    /** Uma "fonte" de vagas que nunca se repete. A API aceita no máximo 30 letras. */
+    private static String fonteNova() {
+        return "t" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+    }
+
     private Map<String, Object> vaga(String fonte, String idFonte) {
         Map<String, Object> v = new HashMap<>();
         v.put("fonte", fonte);
@@ -54,7 +59,7 @@ class VagasEPlanoTest extends TesteBase {
 
     @Test
     void coletaCriaEAtualizaSemDuplicar() throws Exception {
-        String fonte = "teste-" + UUID.randomUUID();
+        String fonte = fonteNova();
         Map<String, Object> envio = Map.of("vagas", List.of(vaga(fonte, "1"), vaga(fonte, "2")));
 
         postInterno("/interno/vagas", envio).andExpect(status().isOk())
@@ -66,7 +71,7 @@ class VagasEPlanoTest extends TesteBase {
 
     @Test
     void vagaSemUrlERecusadaSozinha() throws Exception {
-        String fonte = "teste-" + UUID.randomUUID();
+        String fonte = fonteNova();
         Map<String, Object> semUrl = vaga(fonte, "2");
         semUrl.remove("url");
 
@@ -84,7 +89,7 @@ class VagasEPlanoTest extends TesteBase {
         String usuarioId = ler(resposta, "$.usuario.id");
 
         // 5 vagas com match: 95, 85, 70, 60, 50
-        String fonte = "teste-" + UUID.randomUUID();
+        String fonte = fonteNova();
         int[] percentuais = {95, 85, 70, 60, 50};
         List<Map<String, Object>> vagas = new ArrayList<>();
         List<Map<String, Object>> matches = new ArrayList<>();
