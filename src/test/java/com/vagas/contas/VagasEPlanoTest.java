@@ -43,7 +43,8 @@ class VagasEPlanoTest extends TesteBase {
         m.put("id_fonte", idFonte);
         m.put("percentual", percentual);
         m.put("por_que_combina", "Pede Excel e você tem.");
-        m.put("o_que_falta", List.of(Map.of("item", "Power BI", "tipo", "habilidade", "impacto", 18)));
+        // Regra do time: percentual + soma dos impactos do "o que falta" = 100
+        m.put("o_que_falta", List.of(Map.of("item", "Power BI", "tipo", "habilidade", "impacto", 100 - percentual)));
         return m;
     }
 
@@ -98,7 +99,9 @@ class VagasEPlanoTest extends TesteBase {
             matches.add(match(usuarioId, fonte, String.valueOf(i), percentuais[i]));
         }
         postInterno("/interno/vagas", Map.of("vagas", vagas)).andExpect(status().isOk());
-        postInterno("/interno/matches", Map.of("matches", matches)).andExpect(status().isOk());
+        postInterno("/interno/matches", Map.of("matches", matches)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.novos").value(5))
+                .andExpect(jsonPath("$.recusados.length()").value(0));
 
         // Grátis: só as 3 melhores da semana, sem "o que falta"
         getComToken("/me/vagas", token)
@@ -121,5 +124,20 @@ class VagasEPlanoTest extends TesteBase {
         String token = ler(resposta, "$.accessToken");
 
         getComToken("/me/vagas/" + UUID.randomUUID(), token).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void matchComContaQueNaoFechaEm100ERecusado() throws Exception {
+        String usuarioId = ler(cadastrar(emailNovo()), "$.usuario.id");
+        String fonte = fonteNova();
+        postInterno("/interno/vagas", Map.of("vagas", List.of(vaga(fonte, "1")))).andExpect(status().isOk());
+
+        Map<String, Object> errado = match(usuarioId, fonte, "1", 80);
+        errado.put("o_que_falta", List.of(Map.of("item", "Power BI", "tipo", "habilidade", "impacto", 5)));
+
+        postInterno("/interno/matches", Map.of("matches", List.of(errado)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.novos").value(0))
+                .andExpect(jsonPath("$.recusados.length()").value(1));
     }
 }
