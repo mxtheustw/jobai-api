@@ -3,6 +3,7 @@ package com.vagas.contas.senha;
 import com.vagas.contas.auth.SessaoRepository;
 import com.vagas.contas.auth.TokenService;
 import com.vagas.contas.email.EnvioEmail;
+import com.vagas.contas.email.ModeloEmail;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.seguranca.LimiteTentativas;
 import com.vagas.contas.usuario.Usuario;
@@ -76,8 +77,9 @@ public class RedefinicaoSenhaService {
 
         if (!usuario.temSenha()) {
             envioEmail.enviar(usuario.getEmail(), usuario.getNome(), "Sua conta do JobAI entra com o Google",
-                    html(usuario.getNome(), "Alguém pediu para redefinir a senha da sua conta do JobAI. "
-                            + "Sua conta não tem senha: você entra com o botão <b>Entrar com Google</b>.", null),
+                    ModeloEmail.html(usuario.getNome(), "Alguém pediu para redefinir a senha da sua conta do JobAI. "
+                            + "Sua conta não tem senha: você entra com o botão <b>Entrar com Google</b>.", null, null,
+                            "Se não foi você, ignore este e-mail."),
                     "Alguém pediu para redefinir a senha da sua conta do JobAI. Sua conta não tem senha: "
                             + "você entra com o botão Entrar com Google.");
             return;
@@ -94,8 +96,9 @@ public class RedefinicaoSenhaService {
 
         String link = siteUrl + "/redefinir-senha?token=" + token;
         envioEmail.enviar(usuario.getEmail(), usuario.getNome(), "Redefinir sua senha do JobAI",
-                html(usuario.getNome(), "Recebemos um pedido para redefinir a senha da sua conta. "
-                        + "O link vale por 1 hora.", link),
+                ModeloEmail.html(usuario.getNome(), "Recebemos um pedido para redefinir a senha da sua conta. "
+                        + "O link vale por 1 hora.", link, "Criar senha nova",
+                        "Se não foi você, ignore este e-mail. Sua senha continua a mesma."),
                 "Recebemos um pedido para redefinir a senha da sua conta do JobAI. "
                         + "Abra este link (vale por 1 hora): " + link
                         + "\n\nSe não foi você, ignore este e-mail. Sua senha continua a mesma.");
@@ -116,6 +119,7 @@ public class RedefinicaoSenhaService {
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Conta não encontrada."));
 
         usuario.trocarSenha(passwordEncoder.encode(novaSenha));
+        usuario.confirmarEmail();  // abriu o link que chegou no e-mail: o e-mail é mesmo dela
         t.marcarUsado();
         usuarioRepository.saveAndFlush(usuario);
         tokenEmailRepository.saveAndFlush(t);
@@ -123,24 +127,5 @@ public class RedefinicaoSenhaService {
         // Senha nova: desconecta todos os dispositivos e libera o login, se estava bloqueado
         sessaoRepository.revogarTodas(usuario.getId());
         limiteTentativas.limpar("login:" + usuario.getEmail().toLowerCase(Locale.ROOT));
-    }
-
-    private static String html(String nome, String mensagem, String link) {
-        String primeiro = nome == null ? "" : nome.trim().split("\\s+")[0];
-        String ola = primeiro.isEmpty() ? "Oi!"
-                : "Oi, " + escapar(primeiro.substring(0, 1).toUpperCase(Locale.of("pt", "BR"))
-                + primeiro.substring(1)) + "!";
-        String botao = link == null ? "" :
-                "<p><a href=\"" + link + "\" style=\"display:inline-block;padding:12px 20px;background:#E8B10E;"
-                        + "color:#1D2B22;text-decoration:none;border-radius:6px;font-weight:bold\">Criar senha nova</a></p>"
-                        + "<p style=\"font-size:13px;color:#555\">Se o botão não funcionar, copie este link:<br>" + link + "</p>"
-                        + "<p style=\"font-size:13px;color:#555\">Se não foi você, ignore este e-mail. Sua senha continua a mesma.</p>";
-        return "<div style=\"font-family:Arial,sans-serif;max-width:520px;color:#1D2B22\">"
-                + "<p>" + ola + "</p><p>" + mensagem + "</p>" + botao
-                + "<p>Equipe JobAI</p></div>";
-    }
-
-    private static String escapar(String s) {
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 }

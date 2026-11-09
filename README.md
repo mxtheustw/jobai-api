@@ -194,6 +194,8 @@ Endereço base: `http://localhost:8080`. Tudo é JSON.
 | POST   | `/auth/logout`   | não                   | encerra a sessão daquele dispositivo        |
 | POST   | `/auth/esqueci-senha`   | não            | manda por e-mail o link para criar senha nova |
 | POST   | `/auth/redefinir-senha` | não            | cria a senha nova com o código do link      |
+| POST   | `/auth/confirmar-email` | não            | confirma o e-mail com o código do link      |
+| POST   | `/me/reenviar-confirmacao` | sim         | manda de novo o link de confirmar e-mail    |
 | GET    | `/me`            | sim                   | dados da conta + perfil                     |
 | PUT    | `/me/perfil`     | sim                   | atualiza o perfil                           |
 | GET    | `/me/vagas`      | sim                   | vagas da pessoa com o match (maior % primeiro) |
@@ -383,6 +385,27 @@ Exige que a pessoa tenha aceitado os termos (senão responde **403**).
 
 Os e-mails saem pela **Brevo**. Sem `BREVO_API_KEY`, nada é enviado; no seu PC (com `SITE_URL` em localhost),
 o link aparece no log da API, para testar.
+
+### Confirmar e-mail: `POST /auth/confirmar-email` e `POST /me/reenviar-confirmacao`
+
+Quem se cadastra com e-mail e senha recebe na hora um e-mail "Confirme seu e-mail no JobAI" com o link
+`SITE_URL/confirmar-email?token=...`, que **vale por 24 horas**. Quem entra pelo Google já chega confirmado.
+
+- O `GET /me` diz se já confirmou: `"emailVerificado": true/false`. **Por enquanto quem não confirmou usa o site
+  normalmente**; o site só mostra um aviso ("Confirme seu e-mail") com um botão de reenviar.
+- A página `/confirmar-email` do site pega o `token` da URL e manda:
+  ```json
+  { "token": "o-token-da-url" }
+  ```
+  **204** = confirmado. **400** = link usado, vencido ou inválido (`"Esse link é inválido ou já venceu. Entre na sua conta e peça um novo."`).
+  Não precisa estar logado (a pessoa pode abrir o link no celular).
+- `POST /me/reenviar-confirmacao` (com token, sem corpo): manda um link novo; o anterior para de valer.
+  Se já estiver confirmado, não faz nada. Limite: 5 pedidos a cada 15 minutos (depois, 429).
+- Redefinir a senha pelo "esqueci minha senha" também confirma o e-mail (a pessoa abriu um link que chegou nele).
+
+**Proteção:** se alguém criar uma conta com o e-mail de outra pessoa e não confirmar, e a dona do e-mail depois
+entrar com o Google, a API apaga a senha criada pelo intruso e derruba as sessões dele. A conta passa a ser só da
+dona do e-mail (entrando pelo Google).
 
 ### `DELETE /me`
 

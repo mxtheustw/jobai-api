@@ -8,6 +8,7 @@ import com.vagas.contas.auth.AuthDtos.LoginRequest;
 import com.vagas.contas.auth.AuthDtos.TokensResponse;
 import com.vagas.contas.auth.AuthDtos.TrocarSenhaRequest;
 import com.vagas.contas.auth.AuthDtos.UsuarioResponse;
+import com.vagas.contas.confirmacao.ConfirmacaoEmailService;
 import com.vagas.contas.erro.ApiException;
 import com.vagas.contas.perfil.PerfilDto;
 import com.vagas.contas.seguranca.LimiteTentativas;
@@ -38,6 +39,7 @@ public class AuthService {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final AceiteService aceiteService;
     private final LimiteTentativas limiteTentativas;
+    private final ConfirmacaoEmailService confirmacaoEmailService;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        SessaoRepository sessaoRepository,
@@ -46,7 +48,8 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        GoogleTokenVerifier googleTokenVerifier,
                        AceiteService aceiteService,
-                       LimiteTentativas limiteTentativas) {
+                       LimiteTentativas limiteTentativas,
+                       ConfirmacaoEmailService confirmacaoEmailService) {
         this.usuarioRepository = usuarioRepository;
         this.sessaoRepository = sessaoRepository;
         this.perfilService = perfilService;
@@ -55,6 +58,7 @@ public class AuthService {
         this.googleTokenVerifier = googleTokenVerifier;
         this.aceiteService = aceiteService;
         this.limiteTentativas = limiteTentativas;
+        this.confirmacaoEmailService = confirmacaoEmailService;
     }
 
     /** Cria a conta + o perfil e já devolve a pessoa logada. */
@@ -74,6 +78,7 @@ public class AuthService {
         usuarioRepository.saveAndFlush(usuario);
         aceiteService.registrar(usuario.getId(), TipoAceite.TERMOS, req.aceiteTermos().versao());
         perfilService.salvar(usuario.getId(), perfil);
+        confirmacaoEmailService.enviarLink(usuario);
 
         return responder(usuario, Dispositivo.de(req.dispositivo()), true);
     }
@@ -135,6 +140,13 @@ public class AuthService {
             usuario = existente.get();
             if (!usuario.isAtivo()) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "Esta conta está desativada.");
+            }
+            // Proteção: se alguém criou a conta com este e-mail e senha SEM confirmar o e-mail,
+            // pode ter sido outra pessoa tentando "reservar" a conta. Como o Google provou que o
+            // e-mail é de quem está entrando agora, apagamos a senha e derrubamos as outras sessões.
+            if (!usuario.isEmailVerificado() && usuario.temSenha()) {
+                usuario.removerSenha();
+                sessaoRepository.revogarTodas(usuario.getId());
             }
             usuario.vincularGoogle(conta.id());
             novo = false;

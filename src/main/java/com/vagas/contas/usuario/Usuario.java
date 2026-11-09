@@ -89,6 +89,16 @@ public class Usuario {
         this.emailVerificado = true;
     }
 
+    /** A pessoa provou que o e-mail é dela (abriu um link que mandamos para ele). */
+    public void confirmarEmail() {
+        this.emailVerificado = true;
+    }
+
+    /** Apaga a senha (a conta passa a entrar só pelo Google). */
+    public void removerSenha() {
+        this.senhaHash = null;
+    }
+
     /** Troca a senha (recebe a senha já criptografada). */
     public void trocarSenha(String novoHash) {
         this.senhaHash = novoHash;

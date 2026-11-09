@@ -19,6 +19,7 @@ import java.util.UUID;
 public class TokenEmail {
 
     public static final String RESET_SENHA = "RESET_SENHA";
+    public static final String VERIFICACAO = "VERIFICACAO";
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

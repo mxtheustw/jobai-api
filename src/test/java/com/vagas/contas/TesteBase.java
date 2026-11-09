@@ -1,8 +1,10 @@
 package com.vagas.contas;
 
 import com.jayway.jsonpath.JsonPath;
+import com.vagas.contas.auth.GoogleTokenVerifier;
 import com.vagas.contas.email.EnvioEmail;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -15,9 +17,16 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -46,6 +55,10 @@ public abstract class TesteBase {
 
     @MockitoBean
     protected EnvioEmail envioEmail;
+
+    /** Dublê do Google: o teste decide qual conta Google "entrou". */
+    @MockitoBean
+    protected GoogleTokenVerifier googleTokenVerifier;
 
     protected MockMvc mvc;
 
@@ -122,6 +135,27 @@ public abstract class TesteBase {
     protected ResultActions login(String email, String senha) throws Exception {
         return postJson("/auth/login", Map.of("email", email, "senha", senha, "dispositivo", "WEB"));
     }
+
+    /**
+     * Pega o código (token) do link do último e-mail com esse assunto enviado para esse endereço.
+     * Ex.: tokenDoEmail(email, "Confirme seu e-mail no JobAI")
+     */
+    protected String tokenDoEmail(String email, String assunto) {
+        ArgumentCaptor<String> assuntos = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> textos = ArgumentCaptor.forClass(String.class);
+        verify(envioEmail, atLeastOnce()).enviar(eq(email), any(), assuntos.capture(), anyString(), textos.capture());
+        String token = null;
+        for (int i = 0; i < assuntos.getAllValues().size(); i++) {
+            if (assunto.equals(assuntos.getAllValues().get(i))) {
+                Matcher m = TOKEN_NO_LINK.matcher(textos.getAllValues().get(i));
+                if (m.find()) token = m.group(1);
+            }
+        }
+        if (token == null) throw new AssertionError("Nenhum e-mail \"" + assunto + "\" com link para " + email);
+        return token;
+    }
+
+    private static final Pattern TOKEN_NO_LINK = Pattern.compile("token=([A-Za-z0-9_-]+)");
 
     /** Lê um campo de uma resposta JSON. Ex.: ler(resposta, "$.accessToken") */
     protected static String ler(String respostaJson, String caminho) {
