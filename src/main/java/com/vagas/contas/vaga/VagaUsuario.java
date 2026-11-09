@@ -80,9 +80,10 @@ public class VagaUsuario {
         this.calculadoEm = Instant.now();
     }
 
-    public void liberar() {
+    /** Libera a vaga (plano Grátis). As vagas liberadas juntas recebem o MESMO horário. */
+    public void liberar(Instant quando) {
         if (this.liberadaEm == null) {
-            this.liberadaEm = Instant.now();
+            this.liberadaEm = quando;
         }
     }
 

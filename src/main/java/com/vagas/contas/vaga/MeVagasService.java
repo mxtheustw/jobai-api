@@ -121,7 +121,9 @@ public class MeVagasService {
         int faltam = gratisPorSemana - (int) jaLiberadas;
         if (faltam > 0) {
             List<VagaUsuario> novas = vagaUsuarioRepository.candidatasALiberar(usuarioId, Limit.of(faltam));
-            novas.forEach(VagaUsuario::liberar);
+            // Mesmo horário para todas: assim, dentro da semana, a ordem é pelo percentual (melhor primeiro)
+            Instant agora = Instant.now();
+            novas.forEach(vu -> vu.liberar(agora));
             vagaUsuarioRepository.saveAllAndFlush(novas);
         }
     }
