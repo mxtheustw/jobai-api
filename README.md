@@ -1,6 +1,6 @@
 # JobAI — API de Contas
 
-![Testes](https://github.com/__REPO__/actions/workflows/testes.yml/badge.svg)
+![Testes](https://github.com/mxtheustw/jobai-api/actions/workflows/testes.yml/badge.svg)
 
 API REST em **Java 21 + Spring Boot 4** que cuidava das contas do **JobAI**, um site feito por um time de
 3 pessoas para ajudar quem busca o primeiro emprego a encontrar vagas que combinam com o seu perfil,
