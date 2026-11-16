@@ -10,7 +10,7 @@ Procurar emprego toma tempo: abrir vários sites, filtrar, ler vaga por vaga e d
 O JobAI queria **automatizar essa busca para qualquer área e qualquer nível de experiência**, do primeiro
 emprego ao profissional experiente.
 
-1. A pessoa criaria a conta e preencheria o perfil: área, nível, cidades onde quer trabalhar, modalidade
+1. O usuário criaria a conta e preencheria o perfil: área, nível, cidades onde quer trabalhar, modalidade
    (presencial, remoto, híbrido), habilidades, idiomas.
 2. O sistema buscaria vagas automaticamente em vários sites, e uma IA compararia cada vaga com o perfil.
 3. A pessoa receberia as vagas que combinam com ela, cada uma com a **porcentagem de compatibilidade**,
