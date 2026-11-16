@@ -2,9 +2,23 @@
 
 ![Testes](https://github.com/mxtheustw/jobai-api/actions/workflows/testes.yml/badge.svg)
 
-API REST em **Java 21 + Spring Boot 4** que cuidava das contas do **JobAI**, um site feito por um time de
-3 pessoas para ajudar quem busca o primeiro emprego a encontrar vagas que combinam com o seu perfil,
-com uma porcentagem de compatibilidade e a explicação do porquê.
+API REST em **Java 21 + Spring Boot 4** que cuidava das contas do **JobAI**, um site feito por um time de 3 pessoas.
+
+## A ideia do JobAI
+
+Procurar emprego toma tempo: abrir vários sites, filtrar, ler vaga por vaga e descobrir se ela combina com você.
+O JobAI queria **automatizar essa busca para qualquer área e qualquer nível de experiência**, do primeiro
+emprego ao profissional experiente.
+
+1. A pessoa criaria a conta e preencheria o perfil: área, nível, cidades onde quer trabalhar, modalidade
+   (presencial, remoto, híbrido), habilidades, idiomas.
+2. O sistema buscaria vagas automaticamente em vários sites, e uma IA compararia cada vaga com o perfil.
+3. A pessoa receberia as vagas que combinam com ela, cada uma com a **porcentagem de compatibilidade**,
+   **por que combina** e **o que falta** para ela ser uma candidata mais forte.
+
+Ou seja: a pessoa **não precisaria procurar vaga nenhuma**, só receber as que fazem sentido e se candidatar.
+O modelo de negócio era **assinatura mensal**. O plano Grátis mostrava 3 vagas por semana, e os planos
+pagos liberavam mais vagas e a análise completa do "o que falta".
 
 Eu fui o **responsável pelo back-end e pelo banco de dados**. O front-end (Next.js) e a parte de IA
 (cálculo do match) ficaram com os outros dois integrantes.
@@ -97,7 +111,7 @@ A documentação completa das 26 rotas, do banco e da configuração está em **
 
 O JobAI dependia de reunir vagas de vários sites. Na prática, a maioria dos sites de vagas bloqueia a
 leitura automatizada, e coletar mesmo assim iria contra os termos de uso deles. Os poucos que oferecem
-API oficial têm poucas vagas para entrada no mercado. Sem uma fonte de vagas legítima e com volume, o time
+API oficial têm poucas vagas. Sem uma fonte de vagas legítima e com volume, o time
 decidiu encerrar o projeto.
 
 A lição que fica: **validar a fonte de dados antes de construir o produto em volta dela.**
