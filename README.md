@@ -13,10 +13,10 @@ emprego ao profissional experiente.
 1. O usuário criaria a conta e preencheria o perfil: área, nível, cidades onde quer trabalhar, modalidade
    (presencial, remoto, híbrido), habilidades, idiomas.
 2. O sistema buscaria vagas automaticamente em vários sites, e uma IA compararia cada vaga com o perfil.
-3. A pessoa receberia as vagas que combinam com ela, cada uma com a **porcentagem de compatibilidade**,
-   **por que combina** e **o que falta** para ela ser uma candidata mais forte.
+3. O usuário receberia as vagas que combinam com ele, cada uma com a **porcentagem de compatibilidade**,
+   **por que combina** e **o que falta** para ele ser um candidato mais forte.
 
-Ou seja: a pessoa **não precisaria procurar vaga nenhuma**, só receber as que fazem sentido e se candidatar.
+Ou seja: o usuário **não precisaria procurar vaga nenhuma**, só receber as que fazem sentido e se candidatar.
 O modelo de negócio era **assinatura mensal**. O plano Grátis mostrava 3 vagas por semana, e os planos
 pagos liberavam mais vagas e a análise completa do "o que falta".
 
